@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Samu confere — teste de interface</title>
+</head>
+<body>
+  <!-- Smoke test da UI: carrega index.html em iframe (mesma origem) e exerce os
+       controles reais. Resultados saem em #results; rode com:
+       chrome --headless --dump-dom --virtual-time-budget=30000 \
+         http://127.0.0.1:8080/test_ui.html -->
+  <iframe id="frame" src="/index.html" style="width:1300px;height:900px"></iframe>
+  <pre id="results">RUNNING</pre>
+  <script type="module">
+    const results = [];
+    const check = (name, cond, extra = '') =>
+      results.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ` :: ${extra}` : ''}`);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    const frame = document.getElementById('frame');
+    await new Promise(resolve => {
+      frame.addEventListener('load', () => {
+        frame.contentDocument.addEventListener('data-loaded', resolve, { once: true });
+        setTimeout(resolve, 15000);
+      });
+    });
+    const doc = frame.contentDocument;
+    const q = selector => doc.querySelector(selector);
+    const qa = selector => [...doc.querySelectorAll(selector)];
+
+    check('ready marker', doc.body.dataset.ready === 'true');
+    check('dashboard visible', q('#dashboard').hidden === false);
+    check('title has Samu confere', doc.title.includes('Samu confere'), doc.title);
+    const logo = q('.sidebar .logo');
+    check('logo image loaded', Boolean(logo && logo.complete && logo.naturalWidth > 0));
+    const navAnchors = qa('.sidebar-nav a[href^="#"]');
+    check('sidebar anchors resolve to sections',
+      navAnchors.length === 4 && navAnchors.every(a => doc.getElementById(a.getAttribute('href').slice(1))),
+      navAnchors.map(a => a.getAttribute('href')).join(','));
+    const pressedTab = qa('#candidate-tabs .tab').find(t => t.getAttribute('aria-pressed') === 'true');
+    check('selected tab is yellow-400', Boolean(pressedTab) &&
+      frame.contentWindow.getComputedStyle(pressedTab).backgroundColor === 'rgb(250, 204, 21)');
+    check('primary csv button is yellow-400',
+      frame.contentWindow.getComputedStyle(q('#csv-button')).backgroundColor === 'rgb(250, 204, 21)');
+    check('two candidate tabs', qa('#candidate-tabs .tab').length === 2);
+    check('uf options = 27 UFs + todos', q('#uf-select').options.length === 28,
+      String(q('#uf-select').options.length));
+    check('uf default SP', q('#uf-select').value === 'SP', q('#uf-select').value);
+    check('page size 50 rows', qa('#results-body tr:not(.group-header)').length === 50);
+    check('group header SP', q('.group-header td').textContent.includes('SP'));
+    check('pagination visible (SP > 50)', q('#pagination').hidden === false);
+    check('kpi Lula filled', q('#kpi-13 .kpi-delta').textContent.trim().length > 0);
+    check('kpi Flavio filled', q('#kpi-22 .kpi-delta').textContent.trim().length > 0);
+    check('coverage kpi 5571', q('#kpi-coverage').textContent.includes('5.571'));
+    check('chart svg bars', qa('#chart svg rect').length >= 8,
+      String(qa('#chart svg rect').length));
+
+    qa('#candidate-tabs .tab')[1].click();
+    await sleep(60);
+    check('Flavio tab selected',
+      qa('#candidate-tabs .tab')[1].getAttribute('aria-pressed') === 'true');
+    check('chart title follows candidate', q('#chart-title').textContent.includes('Flavio'));
+
+    q('#uf-select').value = 'all';
+    q('#uf-select').dispatchEvent(new Event('change'));
+    await sleep(60);
+    const headers = qa('.group-header');
+    check('all UFs shows group headers', headers.length >= 2, String(headers.length));
+    check('first group is AC', headers[0] && headers[0].textContent.includes('AC'));
+    const afterSecond = headers[1] && headers[1].nextElementSibling;
+    check('rank restarts per UF',
+      Boolean(afterSecond && afterSecond.querySelector('td').textContent.trim().startsWith('1º')));
+    check('subtitle counts 5.571', q('#table-subtitle').textContent.includes('5.571'),
+      q('#table-subtitle').textContent.trim().slice(0, 60));
+
+    const search = q('#search-input');
+    search.value = 'Rio de Janeiro';
+    search.dispatchEvent(new Event('input'));
+    await sleep(400);
+    const filtered = qa('#results-body tr:not(.group-header)').length;
+    check('search narrows rows', filtered >= 1 && filtered < 50, String(filtered));
+    check('pagination resets on filter', !q('#pagination') ||
+      !q('.page-button[aria-current="page"]') ||
+      q('.page-button[aria-current="page"]').dataset.page === '1');
+
+    search.value = '';
+    search.dispatchEvent(new Event('input'));
+    await sleep(400);
+    q('#trend-select').value = 'loss';
+    q('#trend-select').dispatchEvent(new Event('change'));
+    await sleep(60);
+    check('loss trend: no positive deltas', qa('#results-body td.delta-pos').length === 0);
+    check('loss trend: has negative deltas', qa('#results-body td.delta-neg').length > 0);
+
+    doc.getElementById('reset-button').click();
+    await sleep(60);
+    check('reset restores SP', q('#uf-select').value === 'SP');
+    check('reset clears search', search.value === '');
+    check('reset restores trend', q('#trend-select').value === 'all');
+    check('reset restores order', q('#order-select').value === 'gain');
+
+    const page2 = qa('.page-button').find(button => button.dataset.page === '2');
+    check('page 2 button exists', Boolean(page2));
+    if (page2) {
+      page2.click();
+      await sleep(60);
+      const current = q('.page-button[aria-current="page"]');
+      check('page 2 active', current && current.dataset.page === '2');
+    }
+
+    check('csv button present', Boolean(q('#csv-button')));
+    check('partial warning hidden (all rounds final)', q('#partial-warning').hidden === true);
+
+    // Mobile-viewport checks: document must not overflow horizontally at 390/320.
+    const scroller = q('.chart-scroll');
+    check('chart scroll wrapper present', Boolean(scroller));
+    for (const px of [390, 320]) {
+      frame.style.width = `${px}px`;
+      await sleep(250);
+      const iw = frame.contentWindow.innerWidth;
+      check(`no document overflow at ${px}px`,
+        doc.documentElement.scrollWidth <= iw + 1,
+        `scrollWidth=${doc.documentElement.scrollWidth} innerWidth=${iw}`);
+    }
+    if (scroller) {
+      check('chart scrolls internally at 320px',
+        scroller.scrollWidth > scroller.clientWidth,
+        `scrollWidth=${scroller.scrollWidth} clientWidth=${scroller.clientWidth}`);
+      check('mobile chart hint visible at 320px',
+        frame.contentWindow.getComputedStyle(q('.chart-hint')).display !== 'none');
+    }
+    frame.style.width = '1300px';
+    await sleep(150);
+
+    // Dashboard spacing + hidden-state integrity
+    const dash = q('#dashboard');
+    const dashStyle = frame.contentWindow.getComputedStyle(dash);
+    const gap = parseFloat(dashStyle.rowGap || dashStyle.gap);
+    check('dashboard grid gap >= 20', gap >= 20, `gap=${gap}`);
+    dash.hidden = true;
+    check('hidden attribute hides dashboard',
+      frame.contentWindow.getComputedStyle(dash).display === 'none');
+    dash.hidden = false;
+    check('dashboard restored visible',
+      frame.contentWindow.getComputedStyle(dash).display !== 'none');
+
+    // Sidebar nav follows location hash
+    const win = frame.contentWindow;
+    const navFor = href => qa('.sidebar-nav .nav-link').find(a => a.getAttribute('href') === href);
+    win.location.hash = '#municipios';
+    await sleep(120);
+    check('hashchange activates municipios link',
+      Boolean(navFor('#municipios')) && navFor('#municipios').getAttribute('aria-current') === 'true');
+    const munTarget = doc.getElementById('municipios');
+    check('anchor target exists and visible',
+      Boolean(munTarget) && munTarget.getBoundingClientRect().height > 0);
+    check('anchor scroll-margin ~80px',
+      parseFloat(frame.contentWindow.getComputedStyle(munTarget).scrollMarginTop) >= 79);
+    win.location.hash = '#bogus';
+    await sleep(120);
+    check('unrecognized hash falls back to overview',
+      navFor('#overview').getAttribute('aria-current') === 'true');
+    win.location.hash = '#overview';
+    await sleep(80);
+    check('nav back on overview', navFor('#overview').getAttribute('aria-current') === 'true');
+
+    document.getElementById('results').textContent = `${results.join('\n')}\nDONE`;
+  </script>
+</body>
+</html>

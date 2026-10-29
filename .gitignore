@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+node_modules/
+screenshots/
+*.tmp
+data/raw/
+data/audit/*/official/

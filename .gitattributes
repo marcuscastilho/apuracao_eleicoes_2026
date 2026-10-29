@@ -1,0 +1,2 @@
+# Preserve the exact bytes of the audited snapshots and official captures.
+data/** -text

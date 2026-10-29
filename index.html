@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Samu confere — Presidencial 2026 · TSE</title>
+  <meta name="description" content="Samu confere: comparação município a município dos votos válidos de Lula e Flavio Bolsonaro entre o 1º e o 2º turno das eleições de 2026 (TSE).">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="#overview">
+        <img class="logo" src="logo.png" alt="Logo Samu confere" width="72" height="72">
+        <span class="brand-text">
+          <span class="brand-name">Samu confere</span>
+          <span class="brand-sub">Inteligência eleitoral</span>
+        </span>
+      </a>
+      <nav class="sidebar-nav" aria-label="Seções do painel">
+        <a href="#overview" class="nav-link nav-active" aria-current="true">Visão geral</a>
+        <a href="#comparativo" class="nav-link">Comparativo</a>
+        <a href="#municipios" class="nav-link">Municípios</a>
+        <a href="#metodologia" class="nav-link">Metodologia</a>
+        <a href="charts.html" class="nav-link">Gráficos e mapa</a>
+      </nav>
+      <a class="sidebar-source" href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6257/uf/br/cargo/1/vis/nominal/resultados" target="_blank" rel="noopener noreferrer">
+        Fonte oficial TSE <span aria-hidden="true">↗</span>
+      </a>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <p class="breadcrumb">Eleições <span class="breadcrumb-sep" aria-hidden="true">/</span> <strong>Presidencial 2026</strong></p>
+        <span class="badge badge-local"><span class="badge-dot" aria-hidden="true"></span>Base local</span>
+      </header>
+
+      <main class="content">
+        <section class="hero" id="overview">
+          <h1>Cada cidade. Dois turnos.</h1>
+          <p class="lede">Comparação nominal, cidade a cidade, dos votos válidos de
+            <strong class="lula-text">Lula (PT)</strong> e
+            <strong class="flavio-text">Flavio Bolsonaro (PL)</strong>
+            entre o 1º e o 2º turno de 2026.</p>
+          <dl class="snapshot">
+            <div class="snapshot-item">
+              <dt>Foto da base</dt>
+              <dd id="snapshot-date">—</dd>
+            </div>
+            <div class="snapshot-item">
+              <dt>Turnos</dt>
+              <dd id="rounds-label">—</dd>
+            </div>
+            <div class="snapshot-item">
+              <dt>Base local</dt>
+              <dd id="base-status">Carregando…</dd>
+            </div>
+          </dl>
+          <p class="methodology">Só entram municípios com resultado oficial divulgado pelo TSE nos dois turnos.
+            A participação (% válidos) usa todos os votos válidos de cada turno.
+            O crescimento (%) usa os votos do próprio candidato no 1º turno como base.</p>
+        </section>
+
+        <section id="status" class="status" role="status" aria-live="polite">
+          <p class="status-loading">Carregando base local <span class="dots"><span>.</span><span>.</span><span>.</span></span></p>
+        </section>
+
+        <section id="dashboard" hidden>
+          <div class="controls" aria-label="Filtros">
+            <div class="control-row control-tabs">
+              <div id="candidate-tabs" class="tabs" role="group" aria-label="Candidato"></div>
+              <p class="control-hint">Tendência, ranking, gráfico e exportação seguem o candidato selecionado.</p>
+            </div>
+            <div class="control-row filter-grid overview-filter-grid">
+              <label class="field">
+                <span>Unidade da federação</span>
+                <select id="uf-select"></select>
+              </label>
+              <label class="field field-grow">
+                <span>Buscar município ou código TSE</span>
+                <input id="search-input" type="search" placeholder="Ex.: São Paulo ou 71072" autocomplete="off">
+              </label>
+              <label class="field">
+                <span>Tendência</span>
+                <select id="trend-select">
+                  <option value="all">Todos os municípios</option>
+                  <option value="gain">Em alta (ganhou votos)</option>
+                  <option value="loss">Em queda (perdeu votos)</option>
+                  <option value="stable">Estáveis (mesmos votos)</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Ordenação</span>
+                <select id="order-select">
+                  <option value="gain">Maior ganho de votos</option>
+                  <option value="loss">Maior perda primeiro</option>
+                  <option value="percent">Maior crescimento %</option>
+                </select>
+              </label>
+              <div class="field field-actions">
+                <button id="reset-button" type="button" class="button button-ghost">Limpar filtros</button>
+                <button id="csv-button" type="button" class="button button-primary">Baixar CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <p id="partial-warning" class="warning" hidden></p>
+
+          <section class="kpis" aria-label="Resumo do recorte">
+            <article class="kpi kpi-lula" id="kpi-13"></article>
+            <article class="kpi kpi-flavio" id="kpi-22"></article>
+            <article class="kpi kpi-coverage" id="kpi-coverage"></article>
+          </section>
+
+          <section class="panel chart-panel" id="comparativo">
+            <h2 id="chart-title">Maiores variações do recorte</h2>
+            <p class="panel-subtitle" id="chart-subtitle"></p>
+            <p class="chart-hint">Deslize o gráfico para o lado para ver todos os valores.</p>
+            <div id="chart" class="chart"></div>
+          </section>
+
+          <section class="panel table-panel" id="municipios">
+            <h2>Município a município</h2>
+            <p class="panel-subtitle" id="table-subtitle"></p>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="Tabela de municípios rolável horizontalmente">
+              <table id="results-table">
+                <thead>
+                  <tr>
+                    <th scope="col" class="num">#</th>
+                    <th scope="col">Município</th>
+                    <th scope="col" class="num">1º turno<br><small>votos</small></th>
+                    <th scope="col" class="num">% válidos</th>
+                    <th scope="col" class="num">2º turno<br><small>votos</small></th>
+                    <th scope="col" class="num">% válidos</th>
+                    <th scope="col" class="num">Δ votos</th>
+                    <th scope="col" class="num">Crescimento</th>
+                    <th scope="col" class="num">Δ p.p.</th>
+                  </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+              </table>
+            </div>
+            <p id="empty-state" class="empty" hidden>Nenhum município corresponde aos filtros atuais.
+              Ajuste a busca ou <button type="button" class="linklike" id="empty-reset">limpe os filtros</button>.</p>
+            <nav class="pagination" id="pagination" aria-label="Paginação" hidden></nav>
+          </section>
+        </section>
+
+        <section class="notes" id="metodologia">
+          <h2>Como ler este painel</h2>
+          <ul>
+            <li><strong>Sem inferência individual.</strong> Os números são agregados oficiais por município;
+              o painel não afirma que eleitores de um candidato migraram para outro entre turnos.</li>
+            <li><strong>Denominador.</strong> “% válidos” é a fatia do candidato sobre todos os votos válidos
+              do município naquele turno — todos os candidatos, não só os dois comparados.</li>
+            <li><strong>Três medidas diferentes.</strong> Variação em votos = votos no 2º turno menos votos no 1º. Crescimento (%) = variação dividida pelos votos do candidato no 1º turno × 100. Variação em p.p. = participação no 2º turno menos participação no 1º.</li>
+            <li><strong>Base zero.</strong> Quando o candidato teve 0 voto no 1º turno, o crescimento percentual
+              é indefinido e aparece como “—”.</li>
+            <li><strong>Abrangência.</strong> O exterior (ZZ) é excluído; o DF é mantido como unidade eleitoral
+              do TSE. Municípios sem resultado oficial nos dois turnos ficam de fora do pareamento.</li>
+            <li><strong>Apuração parcial.</strong> Municípios com apuração não finalizada em algum turno
+              são contados no aviso acima da tabela.</li>
+            <li><strong>Fonte.</strong> <a href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6257/uf/br/cargo/1/vis/nominal/resultados" target="_blank" rel="noopener noreferrer">Divulgação oficial de resultados do TSE</a>
+              (dados baixados para a base local indicada no topo).</li>
+          </ul>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>Samu confere · dados oficiais do TSE · comparação agregada por município</p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

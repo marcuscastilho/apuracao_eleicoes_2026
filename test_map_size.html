@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Samu confere — teste de tamanho do mapa</title>
+</head>
+<body>
+  <!-- Mede o ciclo de vida de tamanho do mapa em transições reais de UF
+       (sem resize manual entre seleções). Rode:
+       chrome --headless --dump-dom --virtual-time-budget=300000 \
+         http://127.0.0.1:8080/test_map_size.html -->
+  <iframe id="frame" style="border:0"></iframe>
+  <pre id="results">RUNNING</pre>
+  <script type="module">
+    const results = [];
+    const check = (name, cond, extra = '') =>
+      results.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ` :: ${extra}` : ''}`);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    const frame = document.getElementById('frame');
+    let doc, win, q, qa, map;
+
+    const loadCharts = async (w) => {
+      frame.style.width = `${w}px`;
+      frame.style.height = '1100px';
+      await new Promise(resolve => {
+        frame.addEventListener('load', () => {
+          const c = frame.contentWindow;
+          c.__errors = [];
+          const oe = c.console.error.bind(c.console);
+          c.console.error = (...a) => { c.__errors.push(a.join(' ')); oe(...a); };
+          frame.contentDocument.addEventListener('charts-loaded', resolve, { once: true });
+          setTimeout(resolve, 45000);
+        }, { once: true });
+        frame.src = '/charts.html';
+      });
+      doc = frame.contentDocument;
+      win = frame.contentWindow;
+      q = s => doc.querySelector(s);
+      qa = s => [...doc.querySelectorAll(s)];
+      map = q('#map-chart');
+    };
+
+    const dims = () => ({
+      w: map.clientWidth, h: map.clientHeight,
+      fw: map._fullLayout && map._fullLayout.width,
+      fh: map._fullLayout && map._fullLayout.height,
+    });
+    const dimsMatch = () => {
+      const d = dims();
+      return Math.abs(d.fw - d.w) <= 1 && Math.abs(d.fh - d.h) <= 1;
+    };
+    const totalLocs = () => map.data.reduce((n, t) => n + t.locations.length, 0);
+    const bboxFrac = () => {
+      const paths = map.querySelectorAll('path.choroplethlocation');
+      const u = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+      paths.forEach(p => {
+        const r = p.getBoundingClientRect();
+        u.x0 = Math.min(u.x0, r.left); u.y0 = Math.min(u.y0, r.top);
+        u.x1 = Math.max(u.x1, r.right); u.y1 = Math.max(u.y1, r.bottom);
+      });
+      const dom = map._fullLayout.geo.domain;
+      const sz = map._fullLayout._size;
+      const gw = (dom.x[1] - dom.x[0]) * sz.w, gh = (dom.y[1] - dom.y[0]) * sz.h;
+      return { w: (u.x1 - u.x0) / gw, h: (u.y1 - u.y0) / gh };
+    };
+    const ufSel = () => q('#c-uf-select');
+    const setUf = v => { ufSel().value = v; ufSel().dispatchEvent(new Event('change')); };
+    const idle = async (ms2 = 700) => { await win.samuCharts.whenIdle(); await sleep(ms2); };
+
+    const expectUf = async (uf, shapes, label) => {
+      setUf(uf);
+      await idle(900);
+      const d = dims();
+      check(`${label}: dims match container`, dimsMatch(),
+        `${d.fw}x${d.fh} vs ${d.w}x${d.h}`);
+      check(`${label}: shapes=${shapes}`, totalLocs() === shapes, totalLocs());
+      check(`${label}: map computed visible`,
+        win.getComputedStyle(map).visibility === 'visible');
+      check(`${label}: desktop profile correct`,
+        map._profKey !== 'sm' && map.data[0].colorbar.orientation !== 'h' &&
+        map._fullLayout.margin.b === 0,
+        `prof=${map._profKey} marginB=${map._fullLayout.margin.b}`);
+      const f = bboxFrac();
+      check(`${label}: shapes fill geo area`,
+        Math.max(f.w, f.h) >= 0.65 && Math.min(f.w, f.h) >= 0.3,
+        `${(f.w * 100) | 0}%x${(f.h * 100) | 0}%`);
+    };
+
+    /* ---------- desktop 1440: transições de UF sem resize manual ---------- */
+    await loadCharts(1440);
+    {
+      const d = dims();
+      check('initial map dims match', dimsMatch(), `${d.fw}x${d.fh} vs ${d.w}x${d.h}`);
+      check('initial desktop profile', map._profKey === 'lg' &&
+        map.data[0].colorbar.orientation !== 'h' && map._fullLayout.margin.b === 0,
+        `prof=${map._profKey}`);
+      check('initial map visible', win.getComputedStyle(map).visibility === 'visible');
+    }
+    for (const round of [1, 2]) {
+      await expectUf('PA', 144, `round${round} PA`);
+      await expectUf('SP', 645, `round${round} SP`);
+      await expectUf('DF', 1, `round${round} DF`);
+      await expectUf('PA', 144, `round${round} PA-again`);
+      setUf('all');
+      await idle(700);
+      check(`round${round} back to 27`, totalLocs() === 27 && dimsMatch());
+    }
+
+    // Candidato/métrica na mesma UF preserva tamanho/perfis
+    setUf('PA');
+    await idle(900);
+    qa('#c-tabs .tab')[1].click();
+    q('#c-metric-select').value = 'pp';
+    q('#c-metric-select').dispatchEvent(new Event('change'));
+    await idle(600);
+    check('PA pp cand22 dims match', dimsMatch());
+    check('PA pp still vertical bar', map.data[0].colorbar.orientation !== 'h');
+    qa('#c-tabs .tab')[0].click();
+    q('#c-metric-select').value = 'delta';
+    q('#c-metric-select').dispatchEvent(new Event('change'));
+    setUf('all');
+    await idle(500);
+
+    // Altura do canvas estável enquanto a malha carrega (fetch segurado)
+    const realFetch = win.fetch;
+    let heldResolve = null;
+    const held = new Promise(r => { heldResolve = r; });
+    win.fetch = (u, o) => String(u).includes('municipalities/go.geojson')
+      ? held.then(() => realFetch(u, o)) : realFetch(u, o);
+    const h0 = map.clientHeight;
+    setUf('GO');
+    await sleep(600);
+    check('canvas height stable while loading',
+      map.clientHeight === h0 && h0 >= 300, `${h0}->${map.clientHeight}`);
+    check('stale image hidden during load (not collapsed)',
+      win.getComputedStyle(map).visibility === 'hidden' &&
+      win.getComputedStyle(q('#map-loading')).display !== 'none');
+    check('aria-busy while loading', map.getAttribute('aria-busy') === 'true');
+    heldResolve();
+    await idle(900);
+    check('GO map correct after release',
+      totalLocs() > 200 && dimsMatch() &&
+      win.getComputedStyle(map).visibility === 'visible', totalLocs());
+    win.fetch = realFetch;
+
+    // Falha de geo municipal -> fallback; próxima UF válida recupera tamanho
+    win.fetch = (u, o) => String(u).includes('municipalities/ce.geojson')
+      ? Promise.reject(new TypeError('blocked for test')) : realFetch(u, o);
+    setUf('CE');
+    await idle(900);
+    check('CE geo failure shows fallback',
+      !q('#map-error').hidden && !q('#map-table').hidden);
+    win.fetch = realFetch;
+    setUf('PA');
+    await idle(900);
+    check('PA recovers correct size after CE failure',
+      totalLocs() === 144 && dimsMatch() &&
+      win.getComputedStyle(map).visibility === 'visible');
+    setUf('all');
+    await idle(500);
+
+    // Serialização: resize do mapa e Plotly.react compartilham a mesma fila —
+    // enquanto um resize estiver segurado, nenhum react pode iniciar.
+    const P = win.Plotly;
+    const origResize = P.Plots.resize;
+    const origReact = P.react;
+    let mapResizeStarted = false, resizeHeld = true, reactWhileHeld = 0;
+    let releaseResize = null;
+    const resizeGate = new Promise(r => { releaseResize = r; });
+    const safety = setTimeout(() => { resizeHeld = false; releaseResize(); }, 20000);
+    P.Plots.resize = (gd, ...a) =>
+      gd === map
+        ? (mapResizeStarted = true, resizeGate.then(() => origResize.call(P.Plots, gd, ...a)))
+        : origResize.call(P.Plots, gd, ...a);
+    P.react = (...a) => {
+      if (resizeHeld && mapResizeStarted) reactWhileHeld++;
+      return origReact(...a);
+    };
+    win.dispatchEvent(new Event('resize'));
+    for (let i = 0; i < 80 && !mapResizeStarted; i++) await sleep(50);
+    check('map resize started from window resize event', mapResizeStarted);
+    setUf('PA');
+    await sleep(900);
+    check('no Plotly.react while map resize held', reactWhileHeld === 0,
+      `reacts=${reactWhileHeld}`);
+    check('map stays hidden-not-collapsed while resize held',
+      map.clientHeight >= 300);
+    resizeHeld = false;
+    releaseResize();
+    clearTimeout(safety);
+    await idle(1200);
+    P.Plots.resize = origResize;
+    P.react = origReact;
+    check('PA rendered after queue drains',
+      totalLocs() === 144 && dimsMatch() &&
+      win.getComputedStyle(map).visibility === 'visible', totalLocs());
+    check('PA desktop profile after queue drains',
+      map._profKey !== 'sm' && map.data[0].colorbar.orientation !== 'h' &&
+      map._fullLayout.margin.b === 0);
+    setUf('all');
+    await idle(500);
+    check('no console errors on desktop path', win.__errors.length === 0,
+      win.__errors.join(' | ').slice(0, 200));
+
+    /* ---------- mobile 390: carga inicial já estreita (não resize) ---------- */
+    await loadCharts(390);
+    check('mobile initial no overflow',
+      doc.documentElement.scrollWidth <= win.innerWidth + 1,
+      `${doc.documentElement.scrollWidth} > ${win.innerWidth}`);
+    check('mobile initial dims match', dimsMatch());
+    setUf('PA');
+    await idle(1000);
+    check('mobile PA dims match', dimsMatch());
+    check('mobile PA horizontal colorbar',
+      map.data[0].colorbar.orientation === 'h', map.data[0].colorbar.orientation);
+    check('mobile PA margin.b=55', map._fullLayout.margin.b === 55,
+      map._fullLayout.margin.b);
+    check('mobile PA profile sm', map._profKey === 'sm', map._profKey);
+    check('mobile PA shapes 144', totalLocs() === 144, totalLocs());
+    check('mobile no overflow',
+      doc.documentElement.scrollWidth <= win.innerWidth + 1,
+      `${doc.documentElement.scrollWidth} > ${win.innerWidth}`);
+    const fm = bboxFrac();
+    check('mobile PA shapes fill geo', Math.max(fm.w, fm.h) >= 0.65,
+      `${(fm.w * 100) | 0}%x${(fm.h * 100) | 0}%`);
+    check('no console errors mobile', win.__errors.length === 0,
+      win.__errors.join(' | ').slice(0, 200));
+
+    /* ---------- 320 e 768: só overflow + dims ---------- */
+    await loadCharts(320);
+    check('320 initial no overflow',
+      doc.documentElement.scrollWidth <= win.innerWidth + 1,
+      `${doc.documentElement.scrollWidth} > ${win.innerWidth}`);
+    check('320 initial dims match', dimsMatch());
+    await loadCharts(768);
+    check('768 initial no overflow',
+      doc.documentElement.scrollWidth <= win.innerWidth + 1,
+      `${doc.documentElement.scrollWidth} > ${win.innerWidth}`);
+    check('768 initial dims match', dimsMatch());
+    check('768 colorbar vertical', map.data[0].colorbar.orientation !== 'h');
+
+    frame.style.width = '1300px';
+    document.getElementById('results').textContent = `${results.join('\n')}\nDONE`;
+  </script>
+</body>
+</html>

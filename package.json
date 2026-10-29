@@ -1,0 +1,6 @@
+{
+  "name": "samu-confere",
+  "private": true,
+  "type": "module",
+  "description": "Samu confere — painel estático de comparação entre turnos, TSE 2026 (Lula x Flavio Bolsonaro, por município)."
+}

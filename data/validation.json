@@ -1,0 +1,1199 @@
+{
+  "sha256": "b8e61398729eaabbacf2f451ab6c27ade41da6b40e251394ad999546e74a278f",
+  "coverage": {
+    "expected": 5571,
+    "paired": 5571,
+    "excluded": 0,
+    "errors": 0
+  },
+  "states": [
+    {
+      "uf": "AC",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 469066,
+        "votes": {
+          "13": 134770,
+          "22": 302807
+        }
+      },
+      "official": {
+        "validVotes": 469066,
+        "votes": {
+          "13": 134770,
+          "22": 302807
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:40"
+      }
+    },
+    {
+      "uf": "AC",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 432228,
+        "votes": {
+          "13": 144513,
+          "22": 287715
+        }
+      },
+      "official": {
+        "validVotes": 432228,
+        "votes": {
+          "13": 144513,
+          "22": 287715
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:56"
+      }
+    },
+    {
+      "uf": "AL",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1818856,
+        "votes": {
+          "13": 995459,
+          "22": 735718
+        }
+      },
+      "official": {
+        "validVotes": 1818856,
+        "votes": {
+          "13": 995459,
+          "22": 735718
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:41"
+      }
+    },
+    {
+      "uf": "AL",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1896761,
+        "votes": {
+          "13": 1152621,
+          "22": 744140
+        }
+      },
+      "official": {
+        "validVotes": 1896761,
+        "votes": {
+          "13": 1152621,
+          "22": 744140
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "AM",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2170763,
+        "votes": {
+          "13": 1046996,
+          "22": 976764
+        }
+      },
+      "official": {
+        "validVotes": 2170763,
+        "votes": {
+          "13": 1046996,
+          "22": 976764
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:41"
+      }
+    },
+    {
+      "uf": "AM",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2121028,
+        "votes": {
+          "13": 1145783,
+          "22": 975245
+        }
+      },
+      "official": {
+        "validVotes": 2121028,
+        "votes": {
+          "13": 1145783,
+          "22": 975245
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "AP",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 464858,
+        "votes": {
+          "13": 212503,
+          "22": 212278
+        }
+      },
+      "official": {
+        "validVotes": 464858,
+        "votes": {
+          "13": 212503,
+          "22": 212278
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:40"
+      }
+    },
+    {
+      "uf": "AP",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 421642,
+        "votes": {
+          "13": 222968,
+          "22": 198674
+        }
+      },
+      "official": {
+        "validVotes": 421642,
+        "votes": {
+          "13": 222968,
+          "22": 198674
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:56"
+      }
+    },
+    {
+      "uf": "BA",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 8560291,
+        "votes": {
+          "13": 5664771,
+          "22": 2442585
+        }
+      },
+      "official": {
+        "validVotes": 8560291,
+        "votes": {
+          "13": 5664771,
+          "22": 2442585
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:55"
+      }
+    },
+    {
+      "uf": "BA",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 9094019,
+        "votes": {
+          "13": 6485258,
+          "22": 2608761
+        }
+      },
+      "official": {
+        "validVotes": 9094019,
+        "votes": {
+          "13": 6485258,
+          "22": 2608761
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:27:06"
+      }
+    },
+    {
+      "uf": "CE",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 5617814,
+        "votes": {
+          "13": 3555263,
+          "22": 1756850
+        }
+      },
+      "official": {
+        "validVotes": 5617814,
+        "votes": {
+          "13": 3555263,
+          "22": 1756850
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:44"
+      }
+    },
+    {
+      "uf": "CE",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 5855602,
+        "votes": {
+          "13": 4036124,
+          "22": 1819478
+        }
+      },
+      "official": {
+        "validVotes": 5855602,
+        "votes": {
+          "13": 4036124,
+          "22": 1819478
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:58"
+      }
+    },
+    {
+      "uf": "DF",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1772808,
+        "votes": {
+          "13": 675627,
+          "22": 909616
+        }
+      },
+      "official": {
+        "validVotes": 1772808,
+        "votes": {
+          "13": 675627,
+          "22": 909616
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:40"
+      }
+    },
+    {
+      "uf": "DF",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1804766,
+        "votes": {
+          "13": 825224,
+          "22": 979542
+        }
+      },
+      "official": {
+        "validVotes": 1804766,
+        "votes": {
+          "13": 825224,
+          "22": 979542
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "ES",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2251078,
+        "votes": {
+          "13": 850028,
+          "22": 1233194
+        }
+      },
+      "official": {
+        "validVotes": 2251078,
+        "votes": {
+          "13": 850028,
+          "22": 1233194
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:41"
+      }
+    },
+    {
+      "uf": "ES",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2296469,
+        "votes": {
+          "13": 1001965,
+          "22": 1294504
+        }
+      },
+      "official": {
+        "validVotes": 2296469,
+        "votes": {
+          "13": 1001965,
+          "22": 1294504
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "GO",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 3827823,
+        "votes": {
+          "13": 1188880,
+          "22": 2051888
+        }
+      },
+      "official": {
+        "validVotes": 3827823,
+        "votes": {
+          "13": 1188880,
+          "22": 2051888
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:44"
+      }
+    },
+    {
+      "uf": "GO",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 3930889,
+        "votes": {
+          "13": 1585555,
+          "22": 2345334
+        }
+      },
+      "official": {
+        "validVotes": 3930889,
+        "votes": {
+          "13": 1585555,
+          "22": 2345334
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:59"
+      }
+    },
+    {
+      "uf": "MA",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 4010439,
+        "votes": {
+          "13": 2566301,
+          "22": 1239040
+        }
+      },
+      "official": {
+        "validVotes": 4010439,
+        "votes": {
+          "13": 2566301,
+          "22": 1239040
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:45"
+      }
+    },
+    {
+      "uf": "MA",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 4038202,
+        "votes": {
+          "13": 2808231,
+          "22": 1229971
+        }
+      },
+      "official": {
+        "validVotes": 4038202,
+        "votes": {
+          "13": 2808231,
+          "22": 1229971
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:27:00"
+      }
+    },
+    {
+      "uf": "MG",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 11976235,
+        "votes": {
+          "13": 5188936,
+          "22": 5777548
+        }
+      },
+      "official": {
+        "validVotes": 11976235,
+        "votes": {
+          "13": 5188936,
+          "22": 5777548
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:52:05"
+      }
+    },
+    {
+      "uf": "MG",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 12592885,
+        "votes": {
+          "13": 6351099,
+          "22": 6241786
+        }
+      },
+      "official": {
+        "validVotes": 12592885,
+        "votes": {
+          "13": 6351099,
+          "22": 6241786
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:27:09"
+      }
+    },
+    {
+      "uf": "MS",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1490278,
+        "votes": {
+          "13": 516855,
+          "22": 873351
+        }
+      },
+      "official": {
+        "validVotes": 1490278,
+        "votes": {
+          "13": 516855,
+          "22": 873351
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:41"
+      }
+    },
+    {
+      "uf": "MS",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1556865,
+        "votes": {
+          "13": 628973,
+          "22": 927892
+        }
+      },
+      "official": {
+        "validVotes": 1556865,
+        "votes": {
+          "13": 628973,
+          "22": 927892
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "MT",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1993288,
+        "votes": {
+          "13": 581681,
+          "22": 1298581
+        }
+      },
+      "official": {
+        "validVotes": 1993288,
+        "votes": {
+          "13": 581681,
+          "22": 1298581
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:42"
+      }
+    },
+    {
+      "uf": "MT",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2045266,
+        "votes": {
+          "13": 694167,
+          "22": 1351099
+        }
+      },
+      "official": {
+        "validVotes": 2045266,
+        "votes": {
+          "13": 694167,
+          "22": 1351099
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:58"
+      }
+    },
+    {
+      "uf": "PA",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 4863172,
+        "votes": {
+          "13": 2427237,
+          "22": 2163957
+        }
+      },
+      "official": {
+        "validVotes": 4863172,
+        "votes": {
+          "13": 2427237,
+          "22": 2163957
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:45"
+      }
+    },
+    {
+      "uf": "PA",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 4890389,
+        "votes": {
+          "13": 2690449,
+          "22": 2199940
+        }
+      },
+      "official": {
+        "validVotes": 4890389,
+        "votes": {
+          "13": 2690449,
+          "22": 2199940
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:59"
+      }
+    },
+    {
+      "uf": "PB",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2513747,
+        "votes": {
+          "13": 1541127,
+          "22": 831377
+        }
+      },
+      "official": {
+        "validVotes": 2513747,
+        "votes": {
+          "13": 1541127,
+          "22": 831377
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:44"
+      }
+    },
+    {
+      "uf": "PB",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2659269,
+        "votes": {
+          "13": 1794059,
+          "22": 865210
+        }
+      },
+      "official": {
+        "validVotes": 2659269,
+        "votes": {
+          "13": 1794059,
+          "22": 865210
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:59"
+      }
+    },
+    {
+      "uf": "PE",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 5601017,
+        "votes": {
+          "13": 3553971,
+          "22": 1738043
+        }
+      },
+      "official": {
+        "validVotes": 5601017,
+        "votes": {
+          "13": 3553971,
+          "22": 1738043
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:44"
+      }
+    },
+    {
+      "uf": "PE",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 5950067,
+        "votes": {
+          "13": 4117513,
+          "22": 1832554
+        }
+      },
+      "official": {
+        "validVotes": 5950067,
+        "votes": {
+          "13": 4117513,
+          "22": 1832554
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:59"
+      }
+    },
+    {
+      "uf": "PI",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2146394,
+        "votes": {
+          "13": 1523710,
+          "22": 517028
+        }
+      },
+      "official": {
+        "validVotes": 2146394,
+        "votes": {
+          "13": 1523710,
+          "22": 517028
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:46"
+      }
+    },
+    {
+      "uf": "PI",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2179848,
+        "votes": {
+          "13": 1653989,
+          "22": 525859
+        }
+      },
+      "official": {
+        "validVotes": 2179848,
+        "votes": {
+          "13": 1653989,
+          "22": 525859
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:59"
+      }
+    },
+    {
+      "uf": "PR",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 6585243,
+        "votes": {
+          "13": 2054597,
+          "22": 3945345
+        }
+      },
+      "official": {
+        "validVotes": 6585243,
+        "votes": {
+          "13": 2054597,
+          "22": 3945345
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:50"
+      }
+    },
+    {
+      "uf": "PR",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 6857948,
+        "votes": {
+          "13": 2566504,
+          "22": 4291444
+        }
+      },
+      "official": {
+        "validVotes": 6857948,
+        "votes": {
+          "13": 2566504,
+          "22": 4291444
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:27:02"
+      }
+    },
+    {
+      "uf": "RJ",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 9369700,
+        "votes": {
+          "13": 3693021,
+          "22": 4966844
+        }
+      },
+      "official": {
+        "validVotes": 9369700,
+        "votes": {
+          "13": 3693021,
+          "22": 4966844
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:43"
+      }
+    },
+    {
+      "uf": "RJ",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 9734426,
+        "votes": {
+          "13": 4565393,
+          "22": 5169033
+        }
+      },
+      "official": {
+        "validVotes": 9734426,
+        "votes": {
+          "13": 4565393,
+          "22": 5169033
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:58"
+      }
+    },
+    {
+      "uf": "RN",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2071898,
+        "votes": {
+          "13": 1237963,
+          "22": 720493
+        }
+      },
+      "official": {
+        "validVotes": 2071898,
+        "votes": {
+          "13": 1237963,
+          "22": 720493
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:43"
+      }
+    },
+    {
+      "uf": "RN",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 2151005,
+        "votes": {
+          "13": 1413596,
+          "22": 737409
+        }
+      },
+      "official": {
+        "validVotes": 2151005,
+        "votes": {
+          "13": 1413596,
+          "22": 737409
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:58"
+      }
+    },
+    {
+      "uf": "RO",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 968059,
+        "votes": {
+          "13": 250667,
+          "22": 652988
+        }
+      },
+      "official": {
+        "validVotes": 968059,
+        "votes": {
+          "13": 250667,
+          "22": 652988
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:40"
+      }
+    },
+    {
+      "uf": "RO",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 968828,
+        "votes": {
+          "13": 294446,
+          "22": 674382
+        }
+      },
+      "official": {
+        "validVotes": 968828,
+        "votes": {
+          "13": 294446,
+          "22": 674382
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "RR",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 325545,
+        "votes": {
+          "13": 74420,
+          "22": 231322
+        }
+      },
+      "official": {
+        "validVotes": 325545,
+        "votes": {
+          "13": 74420,
+          "22": 231322
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:40"
+      }
+    },
+    {
+      "uf": "RR",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 303180,
+        "votes": {
+          "13": 83505,
+          "22": 219675
+        }
+      },
+      "official": {
+        "validVotes": 303180,
+        "votes": {
+          "13": 83505,
+          "22": 219675
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "RS",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 6423046,
+        "votes": {
+          "13": 2294759,
+          "22": 3573783
+        }
+      },
+      "official": {
+        "validVotes": 6423046,
+        "votes": {
+          "13": 2294759,
+          "22": 3573783
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:50"
+      }
+    },
+    {
+      "uf": "RS",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 6698930,
+        "votes": {
+          "13": 2824552,
+          "22": 3874378
+        }
+      },
+      "official": {
+        "validVotes": 6698930,
+        "votes": {
+          "13": 2824552,
+          "22": 3874378
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:27:07"
+      }
+    },
+    {
+      "uf": "SC",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 4500897,
+        "votes": {
+          "13": 1127168,
+          "22": 3000020
+        }
+      },
+      "official": {
+        "validVotes": 4500897,
+        "votes": {
+          "13": 1127168,
+          "22": 3000020
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:45"
+      }
+    },
+    {
+      "uf": "SC",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 4638385,
+        "votes": {
+          "13": 1418314,
+          "22": 3220071
+        }
+      },
+      "official": {
+        "validVotes": 4638385,
+        "votes": {
+          "13": 1418314,
+          "22": 3220071
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:27:01"
+      }
+    },
+    {
+      "uf": "SE",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1364196,
+        "votes": {
+          "13": 856019,
+          "22": 417839
+        }
+      },
+      "official": {
+        "validVotes": 1364196,
+        "votes": {
+          "13": 856019,
+          "22": 417839
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:41"
+      }
+    },
+    {
+      "uf": "SE",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 1422395,
+        "votes": {
+          "13": 989041,
+          "22": 433354
+        }
+      },
+      "official": {
+        "validVotes": 1422395,
+        "votes": {
+          "13": 989041,
+          "22": 433354
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:57"
+      }
+    },
+    {
+      "uf": "SP",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 24882948,
+        "votes": {
+          "13": 9505413,
+          "22": 12922023
+        }
+      },
+      "official": {
+        "validVotes": 24882948,
+        "votes": {
+          "13": 9505413,
+          "22": 12922023
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:59"
+      }
+    },
+    {
+      "uf": "SP",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 26258452,
+        "votes": {
+          "13": 12119274,
+          "22": 14139178
+        }
+      },
+      "official": {
+        "validVotes": 26258452,
+        "votes": {
+          "13": 12119274,
+          "22": 14139178
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:27:11"
+      }
+    },
+    {
+      "uf": "TO",
+      "turn": "1",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 930447,
+        "votes": {
+          "13": 404009,
+          "22": 469321
+        }
+      },
+      "official": {
+        "validVotes": 930447,
+        "votes": {
+          "13": 404009,
+          "22": 469321
+        },
+        "final": true,
+        "updatedAt": "05/10/2026 12:51:42"
+      }
+    },
+    {
+      "uf": "TO",
+      "turn": "2",
+      "complete": true,
+      "matches": true,
+      "municipalSum": {
+        "validVotes": 910878,
+        "votes": {
+          "13": 442962,
+          "22": 467916
+        }
+      },
+      "official": {
+        "validVotes": 910878,
+        "votes": {
+          "13": 442962,
+          "22": 467916
+        },
+        "final": true,
+        "updatedAt": "25/10/2026 23:26:58"
+      }
+    }
+  ]
+}

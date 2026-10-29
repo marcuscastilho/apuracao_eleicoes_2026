@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Samu confere — teste da página de gráficos</title>
+</head>
+<body>
+  <!-- Smoke test da página charts.html: carrega em iframe mesma origem e exerce
+       controles reais + traces Plotly. Resultados em #results; rode com:
+       chrome --headless --dump-dom --virtual-time-budget=60000 \
+         http://127.0.0.1:8080/test_charts.html -->
+  <iframe id="frame" src="/charts.html" style="width:1300px;height:1000px"></iframe>
+  <pre id="results">RUNNING</pre>
+  <script type="module">
+    const results = [];
+    const check = (name, cond, extra = '') =>
+      results.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ` :: ${extra}` : ''}`);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    const frame = document.getElementById('frame');
+    await new Promise(resolve => {
+      frame.addEventListener('load', () => {
+        frame.contentDocument.addEventListener('charts-loaded', resolve, { once: true });
+        setTimeout(resolve, 30000);
+      });
+    });
+    const doc = frame.contentDocument;
+    const win = frame.contentWindow;
+    const q = s => doc.querySelector(s);
+    const qa = s => [...doc.querySelectorAll(s)];
+
+    check('ready marker', doc.body.dataset.ready === 'true');
+    check('title has Samu confere', doc.title.includes('Samu confere'));
+    check('dashboard visible', q('#charts-dashboard').hidden === false);
+    check('Plotly loaded local', Boolean(win.Plotly) && win.Plotly.version === '3.3.0',
+      win.Plotly && win.Plotly.version);
+    check('two candidate tabs', qa('#c-tabs .tab').length === 2);
+    check('uf options 27 + Brasil', q('#c-uf-select').options.length === 28);
+    check('uf default all', q('#c-uf-select').value === 'all');
+    check('metric default delta', q('#c-metric-select').value === 'delta');
+
+    const ms = await import('/map-style.js');
+    const map = q('#map-chart');
+    check('map has choropleth trace', Boolean(map.data) && map.data.length >= 1);
+    check('map covers 27 UFs', map.data && map.data[0].locations.length === 27,
+      map.data && String(map.data[0].locations.length));
+    check('map geojson local (no network tile)', Boolean(map.data && map.data[0].geojson));
+    const expScale = ms.buildMapScale(win.samuCharts.model.states, 'sqrt');
+    check('map z range from buildMapScale', map.data &&
+      map.data[0].zmin === expScale.min && map.data[0].zmax === expScale.max,
+      `${map.data[0].zmin}/${map.data[0].zmax}`);
+    check('map showscale follows hasVariation',
+      map.data && map.data[0].showscale === expScale.hasVariation);
+    check('toolbar computed hidden nationally',
+      win.getComputedStyle(q('#map-toolbar')).display === 'none');
+    check('coverage note hidden nationally', q('#map-coverage').hidden);
+
+    const ranking = q('#ranking-chart');
+    check('ranking has 27 bars', ranking.data && ranking.data[0].y.length === 27);
+    const totals = q('#totals-chart');
+    check('totals two candidate traces', totals.data && totals.data.length === 2);
+    check('totals colors Lula/Flavio', totals.data &&
+      totals.data[0].marker.color === '#f87171' &&
+      totals.data[1].marker.color === '#38bdf8',
+      totals.data && `${totals.data[0].marker.color}/${totals.data[1].marker.color}`);
+    const scatter = q('#scatter-chart');
+    check('scatter has municipal points', scatter.data && scatter.data[0].x.length > 5000,
+      scatter.data && String(scatter.data[0].x.length));
+    const dist = q('#distribution-chart');
+    check('donut 3 categories', dist.data && dist.data[0].values.length === 3);
+    const gains = q('#gains-chart');
+    check('gains bars present', gains.data && gains.data[0].x.length > 0);
+
+    // Insights: consumidos verbatim do modelo (textContent, sem narrativa inventada)
+    const rendered = qa('#insights li').map(li => li.textContent);
+    const modelInsights = win.samuCharts && win.samuCharts.model.insights;
+    check('insights render model verbatim',
+      Array.isArray(modelInsights) && rendered.length === modelInsights.length &&
+      rendered.every((t, i) => t === modelInsights[i]));
+
+    // Offline: todos os recursos carregados são da mesma origem (loopback)
+    const external = win.performance.getEntriesByType('resource')
+      .map(e => e.name)
+      .filter(name => /^https?:/.test(name) && !name.startsWith('http://127.0.0.1:8080'));
+    check('no external network requests', external.length === 0, external.join(','));
+
+    // Controles: métrica muda o mapa; UF muda contagem do scatter; reset restaura
+    const before = map.data[0].zmax;
+    q('#c-metric-select').value = 'growth';
+    q('#c-metric-select').dispatchEvent(new Event('change'));
+    await sleep(1200);
+    check('metric change re-renders map z', map.data[0].zmax !== before,
+      `${before} -> ${map.data[0].zmax}`);
+    q('#c-uf-select').value = 'SP';
+    q('#c-uf-select').dispatchEvent(new Event('change'));
+    await sleep(1200);
+    check('uf filter narrows scatter', scatter.data[0].x.length < 800,
+      String(scatter.data[0].x.length));
+    const munSP = win.samuCharts.municipal;
+    check('SP municipal model active', munSP && munSP.scope === 'municipal' && munSP.uf === 'SP');
+    const spLocs = map.data.reduce((n, t) => n + t.locations.length, 0);
+    check('SP map municipal shapes', spLocs === 645 &&
+      map.data[0].locations.every(c => /^35\d{5}$/.test(c)), spLocs);
+    check('map title municipal SP', q('#map-title').textContent.includes('(SP)'),
+      q('#map-title').textContent);
+    check('ranking switches municipal top20', ranking.data[0].y.length === 20,
+      ranking.data[0].y.length);
+    check('ranking title municipal', q('#ranking-title').textContent === 'Ranking municipal');
+    check('toolbar computed visible municipal',
+      win.getComputedStyle(q('#map-toolbar')).display === 'flex');
+    check('Ver Brasil button visible', !q('#map-back').hidden);
+
+    // Clique no mapa via evento Plotly seleciona a UF
+    const mapGd = q('#map-chart');
+    mapGd.emit('plotly_click', { points: [{ customdata: { uf: 'MG' } }] });
+    await win.samuCharts.whenIdle(); await sleep(900);
+    check('map click selects UF', q('#c-uf-select').value === 'MG', q('#c-uf-select').value);
+    check('MG municipal map active', win.samuCharts.municipal &&
+      win.samuCharts.municipal.uf === 'MG' &&
+      map.data[0].locations.every(c => /^\d{7}$/.test(c)));
+
+    q('#c-reset').click();
+    await sleep(1200);
+    check('reset restores all+delta', q('#c-uf-select').value === 'all' &&
+      q('#c-metric-select').value === 'delta');
+    check('map back to national 27 UFs', map.data[0].locations.length === 27);
+    check('municipal model cleared', win.samuCharts.municipal === null);
+
+    // Geografia renderizada: paths SVG reais ocupam boa fração do plot (não só traces)
+    await sleep(200);
+    let geoPaths = map.querySelectorAll('path.choroplethlocation');
+    if (!geoPaths.length) geoPaths = map.querySelectorAll('.geo path');
+    check('rendered SVG has 27 state paths', geoPaths.length === 27, geoPaths.length);
+    const mapRect = map.getBoundingClientRect();
+    const ub = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    let fullRectPath = false;
+    geoPaths.forEach(p => {
+      const r = p.getBoundingClientRect();
+      ub.x0 = Math.min(ub.x0, r.left); ub.y0 = Math.min(ub.y0, r.top);
+      ub.x1 = Math.max(ub.x1, r.right); ub.y1 = Math.max(ub.y1, r.bottom);
+      if (r.width > mapRect.width * 0.95 && r.height > mapRect.height * 0.95) fullRectPath = true;
+    });
+    const uw = ub.x1 - ub.x0, uh = ub.y1 - ub.y0;
+    const geoDom = map._fullLayout && map._fullLayout.geo && map._fullLayout.geo.domain;
+    const sz = map._fullLayout && map._fullLayout._size;
+    const gw = geoDom ? (geoDom.x[1] - geoDom.x[0]) * sz.w : mapRect.width;
+    const gh = geoDom ? (geoDom.y[1] - geoDom.y[0]) * sz.h : mapRect.height;
+    check('map geometry occupies substantial plot area',
+      Math.max(uw / gw, uh / gh) > 0.65 && Math.min(uw / gw, uh / gh) > 0.3,
+      `${uw | 0}x${uh | 0} of geo ${gw | 0}x${gh | 0}`);
+    check('no single path covers whole plot rect', !fullRectPath);
+    check('map bbox aspect looks like Brazil (~0.9-1.3)', uw > 0 && uh > 0 && uw / uh > 0.7 && uw / uh < 1.5,
+      `aspect=${(uw / uh).toFixed(2)}`);
+
+    // Cliques nos tabs de candidato mudam o modelo e os traces
+    const zLula = JSON.stringify(map.data[0].z);
+    qa('#c-tabs .tab')[1].click();
+    await win.samuCharts.whenIdle(); await sleep(300);
+    check('candidate click selects Flavio', win.samuCharts.model.candidate.id === '22');
+    check('map z updates for candidate 22', JSON.stringify(map.data[0].z) !== zLula);
+    check('totals traces persist on switch', (q('#totals-chart').data || []).length === 2);
+    qa('#c-tabs .tab')[0].click();
+    await win.samuCharts.whenIdle(); await sleep(300);
+    check('candidate click back to Lula', win.samuCharts.model.candidate.id === '13');
+
+    // ---- Estilo do mapa: descontinuidade de matiz no zero (map-style.js) ----
+    const fillRgb = p => {
+      const f = (p.style && p.style.fill) || p.getAttribute('fill') || '';
+      const mm = f.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      return mm ? { r: +mm[1], g: +mm[2], b: +mm[3] } : null;
+    };
+    const hueTally = () => {
+      const paths = map.querySelectorAll('path.choroplethlocation');
+      const t = { pos: 0, neg: 0, neutral: 0, paths: paths.length };
+      paths.forEach(p => {
+        const c = fillRgb(p);
+        if (!c) return;
+        if (c.g > c.r) t.pos++; else if (c.r > c.g) t.neg++; else t.neutral++;
+      });
+      return t;
+    };
+    const dirCounts = () => {
+      const dirs = win.samuCharts.model.states.map(s => ms.mapDirection(s.value));
+      return {
+        gain: dirs.filter(d => d === 'gain').length,
+        loss: dirs.filter(d => d === 'loss').length,
+        zero: dirs.filter(d => d === 'zero').length,
+        missing: dirs.filter(d => d === 'missing').length,
+      };
+    };
+    let tt = hueTally(), dc = dirCounts();
+    check('lula map paths total 27', tt.paths === 27, tt.paths);
+    check('map path hues follow raw sign',
+      tt.pos === dc.gain && tt.neg === dc.loss && tt.neutral === dc.zero + dc.missing,
+      `${tt.pos}+/${tt.neg}-/${tt.neutral}n vs ${dc.gain}/${dc.loss}/${dc.zero + dc.missing}`);
+    check('lula all gains teal-hued (no zero/missing gray)',
+      dc.loss === 0 && tt.pos === 27, `${tt.pos}/${tt.neg}/${tt.neutral}`);
+
+    // Legenda estática: contagens e nota do modelo, verbatim
+    const legendLis = qa('.map-legend li');
+    const expectedLegend = ms.buildMapLegend(win.samuCharts.model.states);
+    check('legend has 4 entries', legendLis.length === 4, legendLis.length);
+    check('legend counts+labels match model', legendLis.every((li, i) =>
+      li.textContent.includes(expectedLegend.entries[i].label) &&
+      li.textContent.includes(`${expectedLegend.entries[i].count} UFs`)));
+    check('legend note verbatim from model',
+      q('#map-legend-note').textContent === expectedLegend.note);
+    check('gain legend count is 27 for Lula',
+      legendLis[0].textContent.includes('27 UFs'), legendLis[0].textContent);
+
+    // z crus ficam no traço base; zero/missing vão para overlays de cor constante
+    const rampRows = win.samuCharts.model.states.filter(s => {
+      const d = ms.mapDirection(s.value); return d === 'gain' || d === 'loss';
+    });
+    check('base trace z equals raw model values',
+      JSON.stringify(map.data[0].z) === JSON.stringify(rampRows.map(r => r.value)));
+    check('base trace uses buildMapScale colorscale',
+      JSON.stringify(map.data[0].colorscale) ===
+      JSON.stringify(ms.buildMapScale(win.samuCharts.model.states, 'sqrt').colorscale));
+    check('range note verbatim from model',
+      q('#map-scale-range').textContent ===
+      ms.buildMapLegend(win.samuCharts.model.states, 'sqrt',
+        win.samuCharts.model.metric.unit).rangeNote);
+
+    // Flavio: matizes seguem o sinal cru dos valores do modelo
+    qa('#c-tabs .tab')[1].click();
+    await win.samuCharts.whenIdle(); await sleep(300);
+    tt = hueTally(); dc = dirCounts();
+    check('flavio map path hues follow raw sign',
+      tt.pos === dc.gain && tt.neg === dc.loss && tt.neutral === dc.zero + dc.missing,
+      `${tt.pos}+/${tt.neg}-/${tt.neutral}n vs ${dc.gain}/${dc.loss}/${dc.zero + dc.missing}`);
+    check('flavio negative states are orange-hued',
+      dc.loss > 0 && tt.neg === dc.loss, `loss=${dc.loss}`);
+
+    // Métricas growth/pp também seguem o sinal cru
+    const metSel = q('#c-metric-select');
+    for (const met of ['growth', 'pp']) {
+      metSel.value = met; metSel.dispatchEvent(new Event('change'));
+      await win.samuCharts.whenIdle(); await sleep(300);
+      tt = hueTally(); dc = dirCounts();
+      check(`metric ${met} hues follow raw sign`,
+        tt.pos === dc.gain && tt.neg === dc.loss && tt.neutral === dc.zero + dc.missing,
+        `${tt.pos}+/${tt.neg}-/${tt.neutral}n vs ${dc.gain}/${dc.loss}/${dc.zero + dc.missing}`);
+    }
+    metSel.value = 'delta'; metSel.dispatchEvent(new Event('change'));
+    qa('#c-tabs .tab')[0].click();
+    await win.samuCharts.whenIdle(); await sleep(300);
+
+    // Fixture lead: ibge 11(-100),12(-1),13(0),14(1),15(100),16(null)
+    const fxm = {
+      states: [
+        { ibge: '11', value: -100 }, { ibge: '12', value: -1 }, { ibge: '13', value: 0 },
+        { ibge: '14', value: 1 }, { ibge: '15', value: 100 }, { ibge: '16', value: null },
+      ].map(s => Object.assign(s, {
+        uf: `F${s.ibge}`, name: `FX${s.ibge}`, selected: false, partialCount: 0,
+        metrics: { first: 10, second: 12, shareFirst: 1, shareSecond: 1, delta: 1, growth: 1, pp: 1 },
+      })),
+      mapRange: { min: -100, max: 100 },
+      metric: { label: 'Variação', unit: 'votos' },
+      candidate: { name: 'FX' },
+    };
+    const fxTraces = win.samuCharts.mapTraces(fxm);
+    check('fixture base ramp excludes zero/missing',
+      JSON.stringify(fxTraces[0].locations) === JSON.stringify(['11', '12', '14', '15']) &&
+      JSON.stringify(fxTraces[0].z) === JSON.stringify([-100, -1, 1, 100]));
+    check('fixture traces = base + zero + missing', fxTraces.length === 3, fxTraces.length);
+    check('fixture zero overlay constant color',
+      fxTraces[1].locations.length === 1 && fxTraces[1].locations[0] === '13' &&
+      fxTraces[1].colorscale[0][1] === ms.MAP_COLORS.zero);
+    check('fixture missing overlay constant color',
+      fxTraces[2].locations.length === 1 && fxTraces[2].locations[0] === '16' &&
+      fxTraces[2].colorscale[0][1] === ms.MAP_COLORS.missing);
+    check('fixture missing hover shows não definido',
+      fxTraces[2].text[0].includes('não definido'));
+
+    // Área sem resultado pareado (hasData:false): hover explícito, não formata nulos
+    const fxm2 = Object.assign({}, fxm, {
+      scope: 'municipal',
+      rows: [...fxm.states, {
+        ibge: '17', value: null, hasData: false, name: 'Área IBGE 17', code: null,
+        metrics: { first: null, second: null, shareFirst: null, shareSecond: null, delta: null, growth: null, pp: null },
+        uf: 'F17', selected: false,
+      }],
+    });
+    const fxT2 = win.samuCharts.mapTraces(fxm2);
+    const miss2 = fxT2.find(t => t.colorscale[0][1] === ms.MAP_COLORS.missing);
+    check('unmapped area uses missing overlay',
+      miss2 && miss2.locations.includes('16') && miss2.locations.includes('17'));
+    check('unmapped area hover says sem resultado',
+      miss2 && miss2.text[miss2.locations.indexOf('17')].includes('Sem resultado municipal pareado'));
+    check('unmapped area customdata municipal',
+      miss2 && miss2.customdata[miss2.locations.indexOf('17')].kind === 'municipal');
+
+    // Seletor de escala removido: contraste ampliado (sqrt) é aplicado sempre
+    check('no map scale control in DOM',
+      !q('#map-scale-select') && !win.document.querySelector('.map-scale-control'));
+    check('state has no mapScale', !('mapScale' in win.samuCharts.state));
+
+    // Mapa municipal: UF selecionada troca o mapa e usa escala interna da UF
+    const ufSelX = q('#c-uf-select');
+    ufSelX.value = 'PA'; ufSelX.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(800);
+    const mmPa = win.samuCharts.municipal;
+    check('PA municipal model 144 units', mmPa && mmPa.coverage.expected === 144,
+      mmPa && mmPa.coverage.expected);
+    const paLocs = map.data.reduce((n, t) => n + t.locations.length, 0);
+    check('PA map municipal 144 shapes', paLocs === 144, paLocs);
+    check('PA locations are 7-digit IBGE 15xxxxx',
+      map.data[0].locations.every(c => /^15\d{5}$/.test(c)));
+    check('PA map title', q('#map-title').textContent.includes('(PA)'),
+      q('#map-title').textContent);
+    check('PA scale within UF bounds', (() => {
+      const s = ms.buildMapScale(mmPa.rows, 'sqrt');
+      return map.data[0].zmin === s.min && map.data[0].zmax === s.max;
+    })(), `${map.data[0].zmin}/${map.data[0].zmax}`);
+    check('municipal legend counts municípios',
+      qa('.map-legend li').every(li => li.textContent.includes('municípios')));
+    check('municipal note verbatim', q('#map-coverage').textContent === mmPa.note);
+    check('helper text municipal',
+      q('#map-helper').textContent.includes('Selecione Brasil para voltar'));
+    check('municipal hover shows TSE+IBGE ids',
+      map.data[0].text.some(t => t.includes('TSE') && t.includes('IBGE')));
+    const mPaths = map.querySelectorAll('path.choroplethlocation');
+    check('PA rendered municipal paths >100', mPaths.length > 100, mPaths.length);
+
+    // candidato/métrica mudam os dados crus do mapa municipal
+    const paZ = JSON.stringify(map.data[0].z);
+    qa('#c-tabs .tab')[1].click();
+    metSel.value = 'pp'; metSel.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(700);
+    check('PA municipal z changes with cand+metric', JSON.stringify(map.data[0].z) !== paZ);
+    check('municipal z equals model rows', JSON.stringify(map.data[0].z) === JSON.stringify(
+      win.samuCharts.municipal.rows.filter(r => {
+        const d = ms.mapDirection(r.value); return d === 'gain' || d === 'loss';
+      }).map(r => r.value)));
+
+    // Corrida real: AP pendente em fetch segurado, SP despachado depois e deve vencer
+    const realFetch = win.fetch;
+    let apResolve = null, apStarted = false;
+    const apHold = new Promise(res => { apResolve = res; });
+    win.fetch = (u, o) => {
+      if (String(u).includes('municipalities/ap.geojson')) {
+        apStarted = true;
+        return apHold.then(() => realFetch(u, o));
+      }
+      return realFetch(u, o);
+    };
+    ufSelX.value = 'AP'; ufSelX.dispatchEvent(new Event('change'));
+    await sleep(400);
+    check('AP geo request started (race setup)', apStarted);
+    ufSelX.value = 'SP'; ufSelX.dispatchEvent(new Event('change'));
+    await sleep(150);
+    apResolve();
+    await win.samuCharts.whenIdle(); await sleep(900);
+    check('queued SP wins over held AP', win.samuCharts.municipal &&
+      win.samuCharts.municipal.uf === 'SP' &&
+      map.data.reduce((n, t) => n + t.locations.length, 0) === 645 &&
+      map.data[0].locations.every(c => /^35\d{5}$/.test(c)));
+    win.fetch = realFetch;
+
+    // Mapa municipal em 390px: barra horizontal + formas ocupam a área do plot
+    frame.style.width = '390px'; win.dispatchEvent(new win.Event('resize'));
+    await sleep(900);
+    check('municipal map colorbar horizontal at 390',
+      map.data[0].colorbar && map.data[0].colorbar.orientation === 'h');
+    const spPaths = map.querySelectorAll('path.choroplethlocation');
+    let mx0 = Infinity, mx1 = -Infinity;
+    spPaths.forEach(p => {
+      const r = p.getBoundingClientRect();
+      mx0 = Math.min(mx0, r.left); mx1 = Math.max(mx1, r.right);
+    });
+    const gsz = map._fullLayout && map._fullLayout._size;
+    const gw2 = gsz ? gsz.w : map.getBoundingClientRect().width;
+    check('municipal shapes fill mobile plot',
+      (mx1 - mx0) >= 150 || (mx1 - mx0) >= gw2 * 0.55,
+      `${(mx1 - mx0) | 0}px of ${gw2 | 0}`);
+    check('no document overflow at 390 municipal',
+      doc.documentElement.scrollWidth <= win.innerWidth + 1,
+      `${doc.documentElement.scrollWidth} > ${win.innerWidth}`);
+    frame.style.width = '1300px'; win.dispatchEvent(new win.Event('resize'));
+    await sleep(900);
+    check('colorbar back to vertical on desktop',
+      map.data[0].colorbar.orientation === 'v');
+
+    // Ver Brasil preserva candidato/métrica
+    q('#map-back').click();
+    await win.samuCharts.whenIdle(); await sleep(600);
+    check('Ver Brasil restores national map',
+      map.data[0].locations.length === 27 && win.samuCharts.municipal === null);
+    check('candidate/metric preserved', win.samuCharts.state.candidateId === '22' &&
+      win.samuCharts.state.metric === 'pp');
+    q('#c-reset').click();
+    qa('#c-tabs .tab')[0].click();
+    await win.samuCharts.whenIdle(); await sleep(500);
+    check('reset restores all + delta',
+      win.samuCharts.state.uf === 'all' && win.samuCharts.state.metric === 'delta' &&
+      win.samuCharts.model.candidate.id === '13');
+
+    // MT: 142 unidades, 141 formas — lacuna nomeada na nota, totais intactos
+    ufSelX.value = 'MT'; ufSelX.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(900);
+    const mmMt = win.samuCharts.municipal;
+    check('MT coverage gap 142/141', mmMt && mmMt.coverage.expected === 142 &&
+      mmMt.coverage.mapped === 141 && mmMt.coverage.citiesWithoutGeometry.length === 1,
+      mmMt && `${mmMt.coverage.expected}/${mmMt.coverage.mapped}`);
+    check('MT note names unmapped city', mmMt && mmMt.note.includes('Boa Esperança'),
+      mmMt && mmMt.note.slice(0, 80));
+    check('MT note warning styled', q('#map-coverage').classList.contains('warning'));
+    check('MT totals still count 142', win.samuCharts.model.cityCount === 142,
+      win.samuCharts.model.cityCount);
+
+    // DF: unidade eleitoral única (Brasília)
+    ufSelX.value = 'DF'; ufSelX.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(900);
+    const mmDf = win.samuCharts.municipal;
+    const dfLocs = map.data.reduce((n, t) => n + t.locations.length, 0);
+    check('DF map single Brasília feature', dfLocs === 1 && mmDf && mmDf.rankingCount === 1,
+      dfLocs);
+    check('DF note mentions Brasília', mmDf && mmDf.note.includes('Brasília'));
+    ufSelX.value = 'all'; ufSelX.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(500);
+
+    // Rótulos municipais únicos entre UFs; ranking passa nulls do modelo sem zero falso
+    check('municipal bar labels use name/UF',
+      gains.data[0].y.every(v => String(v).includes('/')));
+    const sr = win.samuCharts.model.stateRanking;
+    check('ranking x equals model values incl. nulls',
+      ranking.data[0].x.every((v, i) => v === sr[i].value));
+
+    // Transições vazio <-> barras (DF, SP, volta para Brasil)
+    const ufSel = q('#c-uf-select');
+    const setUf = v => { ufSel.value = v; ufSel.dispatchEvent(new Event('change')); };
+    const lossesEl = q('#losses-chart');
+    setUf('DF');
+    await win.samuCharts.whenIdle(); await sleep(300);
+    const dfEmpty = win.samuCharts.model.losses.length === 0;
+    check('DF losses panel matches model (empty or bars)',
+      !!lossesEl.querySelector('.empty-note') === dfEmpty,
+      `losses=${win.samuCharts.model.losses.length}`);
+    check('DF gains bars rendered', (q('#gains-chart').data || []).length === 1);
+    setUf('SP');
+    await win.samuCharts.whenIdle(); await sleep(300);
+    const spEmpty = win.samuCharts.model.losses.length === 0;
+    check('SP losses matches model', !!lossesEl.querySelector('.empty-note') === spEmpty,
+      `losses=${win.samuCharts.model.losses.length}`);
+    if (!spEmpty) {
+      check('SP losses have real bar DOM',
+        lossesEl.querySelectorAll('.barlayer path, .barlayer .trace path').length > 0);
+    }
+    setUf('all');
+    await win.samuCharts.whenIdle(); await sleep(300);
+
+    // Falha isolada da geometria: demais gráficos seguem, mapa cai para fallback
+    const origFetch = win.fetch;
+    win.fetch = (u, o) => String(u).includes('brazil-ufs')
+      ? Promise.reject(new TypeError('blocked for test')) : origFetch(u, o);
+    await win.samuCharts.reload();
+    await win.samuCharts.whenIdle(); await sleep(400);
+    check('ready true despite geo failure', doc.body.dataset.ready === 'true');
+    check('geo failure shows map fallback', !q('#map-error').hidden);
+    check('totals still render on geo failure', (q('#totals-chart').data || []).length === 2);
+    const fbRows = qa('#map-table tbody tr').length;
+    check('fallback table renders 27 UFs', !q('#map-table').hidden && fbRows === 27, fbRows);
+    win.fetch = origFetch;
+    await win.samuCharts.reload();
+    await win.samuCharts.whenIdle(); await sleep(400);
+    check('map recovers after fetch restore',
+      doc.body.dataset.ready === 'true' && map.data && map.data[0].locations.length === 27);
+
+    // Falha da malha municipal: fallback com tabela TSE; demais gráficos seguem
+    win.fetch = (u, o) => String(u).includes('municipalities/am.geojson')
+      ? Promise.reject(new TypeError('blocked for test')) : origFetch(u, o);
+    ufSel.value = 'AM'; ufSel.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(900);
+    check('municipal geo failure shows error', !q('#map-error').hidden);
+    check('fallback legend computed hidden',
+      win.getComputedStyle(q('#map-legend')).display === 'none' &&
+      win.getComputedStyle(q('#map-legend-note')).display === 'none');
+    const amRows = qa('#map-table tbody tr').length;
+    check('municipal fallback table rows AM=62', !q('#map-table').hidden && amRows === 62, amRows);
+    check('totals still render on municipal failure', (q('#totals-chart').data || []).length === 2);
+    win.fetch = origFetch;
+    ufSel.value = 'all'; ufSel.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(600);
+    check('national map recovered after AM failure', map.data[0].locations.length === 27);
+
+    // Falha do índice: nacional segue; UF selecionada cai na tabela (dados TSE)
+    win.fetch = (u, o) => String(u).includes('municipality-index')
+      ? Promise.reject(new TypeError('blocked for test')) : origFetch(u, o);
+    await win.samuCharts.reload();
+    await win.samuCharts.whenIdle(); await sleep(500);
+    check('national works despite index failure',
+      doc.body.dataset.ready === 'true' && map.data[0].locations.length === 27);
+    ufSel.value = 'RR'; ufSel.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(900);
+    check('index failure falls back municipal table',
+      !q('#map-table').hidden && !q('#map-error').hidden);
+    check('index fallback keeps UF totals', (q('#totals-chart').data || []).length === 2);
+    win.fetch = origFetch;
+    await win.samuCharts.reload();
+    await win.samuCharts.whenIdle(); await sleep(500);
+    check('national recovered after index failure',
+      map.data[0].locations.length === 27);
+
+    // Sem overflow do documento em 390/320 e mapa legível sem pan
+    for (const px of [390, 320]) {
+      frame.style.width = `${px}px`;
+      win.dispatchEvent(new win.Event('resize'));
+      await sleep(600);
+      const iw = win.innerWidth;
+      check(`no document overflow at ${px}px`,
+        doc.documentElement.scrollWidth <= iw + 1,
+        `scrollWidth=${doc.documentElement.scrollWidth} innerWidth=${iw}`);
+      const mapScroll = q('#map-chart').parentElement;
+      check(`map needs no horizontal pan at ${px}px`,
+        mapScroll.scrollWidth <= mapScroll.clientWidth + 1,
+        `${mapScroll.scrollWidth} > ${mapScroll.clientWidth}`);
+    }
+    frame.style.width = '1300px';
+
+    document.getElementById('results').textContent = `${results.join('\n')}\nDONE`;
+  </script>
+</body>
+</html>

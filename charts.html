@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Samu confere — Gráficos e mapa · TSE 2026</title>
+  <meta name="description" content="Samu confere: gráficos e mapa coroplético das variações de votos de Lula e Flavio Bolsonaro entre os turnos de 2026 (TSE).">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="charts.css">
+  <script src="vendor/plotly-3.3.0.min.js" defer></script>
+  <script type="module" src="charts.js"></script>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="index.html#overview">
+        <img class="logo" src="logo.png" alt="Logo Samu confere" width="72" height="72">
+        <span class="brand-text">
+          <span class="brand-name">Samu confere</span>
+          <span class="brand-sub">Inteligência eleitoral</span>
+        </span>
+      </a>
+      <nav class="sidebar-nav" aria-label="Seções do painel">
+        <a href="index.html#overview" class="nav-link">Visão geral</a>
+        <a href="index.html#comparativo" class="nav-link">Comparativo</a>
+        <a href="index.html#municipios" class="nav-link">Municípios</a>
+        <a href="index.html#metodologia" class="nav-link">Metodologia</a>
+        <a href="charts.html" class="nav-link nav-active" aria-current="true">Gráficos e mapa</a>
+      </nav>
+      <a class="sidebar-source" href="https://resultados.tse.jus.br/oficial/app/index.html#/eleicao/6257/uf/br/cargo/1/vis/nominal/resultados" target="_blank" rel="noopener noreferrer">
+        Fonte oficial TSE <span aria-hidden="true">↗</span>
+      </a>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <p class="breadcrumb">Eleições <span class="breadcrumb-sep" aria-hidden="true">/</span> <strong>Presidencial 2026</strong></p>
+        <span class="badge badge-local"><span class="badge-dot" aria-hidden="true"></span>Base local · gráficos Plotly offline</span>
+      </header>
+
+      <main class="content">
+        <section class="hero">
+          <h1>Gráficos que ajudam a conferir.</h1>
+          <p class="lede">Mapa e visualizações da variação de votos válidos de
+            <strong class="lula-text">Lula (PT)</strong> e
+            <strong class="flavio-text">Flavio Bolsonaro (PL)</strong>
+            entre o 1º e o 2º turno de 2026.</p>
+          <p class="methodology">Os filtros desta página são independentes da Visão geral.
+            Mapa e ranking mostram as UFs no recorte Brasil e os municípios quando uma
+            UF é selecionada; os demais gráficos usam a UF selecionada.</p>
+          <p class="methodology">Os dados são agregados: os gráficos não comprovam transferência de eleitores entre candidatos. Crescimento (%) usa como base os votos do próprio candidato no 1º turno; p.p. compara a participação nos votos válidos.</p>
+        </section>
+
+        <section id="charts-status" class="status" role="status" aria-live="polite">
+          <p class="status-loading">Carregando gráficos <span class="dots"><span>.</span><span>.</span><span>.</span></span></p>
+        </section>
+
+        <section id="charts-dashboard" hidden>
+          <div class="controls" aria-label="Filtros dos gráficos">
+            <div class="control-row control-tabs">
+              <div id="c-tabs" class="tabs" role="group" aria-label="Candidato"></div>
+              <p class="control-hint">A métrica altera o mapa e o ranking; a UF leva o mapa e o ranking aos municípios e filtra os demais gráficos. O candidato selecionado orienta as leituras.</p>
+            </div>
+            <div class="control-row filter-grid charts-filter-grid">
+              <label class="field">
+                <span>Unidade da federação</span>
+                <select id="c-uf-select"></select>
+              </label>
+              <label class="field">
+                <span>Métrica</span>
+                <select id="c-metric-select" aria-describedby="c-metric-desc">
+                  <option value="delta">Variação em votos</option>
+                  <option value="growth">Crescimento %</option>
+                  <option value="pp">Mudança de participação (p.p.)</option>
+                </select>
+              </label>
+              <div class="field field-actions">
+                <button id="c-reset" type="button" class="button button-ghost">Limpar filtros</button>
+              </div>
+            </div>
+            <p id="c-metric-desc" class="metric-desc"></p>
+          </div>
+
+          <section class="panel insights-panel" aria-label="Leituras do recorte">
+            <h2>Leituras do recorte</h2>
+            <ul id="insights" class="insights"></ul>
+          </section>
+
+          <section class="kpis" aria-label="Resumo do recorte">
+            <article class="kpi kpi-lula" id="kpi-13"></article>
+            <article class="kpi kpi-flavio" id="kpi-22"></article>
+            <article class="kpi kpi-coverage" id="kpi-coverage"></article>
+          </section>
+
+          <div class="charts-grid">
+            <section class="panel chart-panel span-2">
+              <h2><span id="map-title">Mapa do Brasil</span> — <span id="map-metric-name"></span></h2>
+              <p class="panel-subtitle" id="map-subtitle"></p>
+              <p class="panel-subtitle" id="scope-note"></p>
+              <div class="map-toolbar" id="map-toolbar" hidden>
+                <button type="button" id="map-back" class="button button-ghost">Ver Brasil</button>
+                <p class="panel-subtitle map-helper" id="map-helper">Selecione Brasil para voltar ao mapa nacional. Toque ou passe o mouse sobre um município para ver os dois turnos.</p>
+              </div>
+              <ul id="map-legend" class="map-legend" hidden></ul>
+              <p id="map-legend-note" class="map-legend-note" hidden></p>
+              <p id="map-scale-range" class="map-legend-note" hidden></p>
+              <p id="map-coverage" class="map-legend-note" hidden></p>
+              <p class="map-legend-note" id="map-loading" hidden>Carregando malha municipal do IBGE…</p>
+              <p class="map-error" id="map-error" hidden></p>
+              <div class="plot-scroll"><div id="map-chart" class="plot map-plot"></div></div>
+              <div id="map-table" class="map-table" hidden></div>
+            </section>
+
+            <section class="panel chart-panel">
+              <h2>Votos agregados por turno</h2>
+              <p class="panel-subtitle">Soma dos dois candidatos nos municípios do recorte — eixo em votos.</p>
+              <div class="plot-scroll"><div id="totals-chart" class="plot"></div></div>
+            </section>
+
+            <section class="panel chart-panel">
+              <h2>Municípios por direção</h2>
+              <p class="panel-subtitle">Quantos municípios ganharam, perderam ou mantiveram votos do candidato selecionado.</p>
+              <div class="plot-scroll"><div id="distribution-chart" class="plot"></div></div>
+            </section>
+
+            <section class="panel chart-panel span-2">
+              <h2><span id="ranking-title">Ranking estadual</span> — <span id="ranking-metric-name"></span></h2>
+              <p class="panel-subtitle" id="ranking-subtitle">Brasil: 27 UFs ordenadas pela métrica selecionada. Selecione uma UF para abrir o ranking de seus municípios.</p>
+              <div class="plot-scroll"><div id="ranking-chart" class="plot plot-tall"></div></div>
+            </section>
+
+            <section class="panel chart-panel">
+              <h2>Maiores ganhos municipais</h2>
+              <p class="panel-subtitle">Até 10 municípios do recorte com maior aumento de votos.</p>
+              <div class="plot-scroll"><div id="gains-chart" class="plot"></div></div>
+            </section>
+
+            <section class="panel chart-panel">
+              <h2>Maiores perdas municipais</h2>
+              <p class="panel-subtitle">Até 10 municípios do recorte com maior queda de votos.</p>
+              <div class="plot-scroll"><div id="losses-chart" class="plot"></div></div>
+            </section>
+
+            <section class="panel chart-panel span-2">
+              <h2>Participação por município</h2>
+              <p class="panel-subtitle">Cada ponto é um município: participação do candidato no 1º turno (x) contra a do 2º (y). Acima da linha tracejada = ganho de participação; abaixo = perda. Verde-azulado: ganho de participação; laranja: perda; cinza: estabilidade.</p>
+              <div class="plot-scroll"><div id="scatter-chart" class="plot"></div></div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>Samu confere · dados oficiais do TSE · geometria IBGE · gráficos Plotly executados localmente</p>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>

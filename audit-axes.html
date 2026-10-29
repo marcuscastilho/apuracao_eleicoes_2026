@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head><body style="margin:0">
+<!-- Leitura mecânica dos títulos de eixo Plotly: _fullLayout.{x,y}axis.title.text
+     e os nós DOM .g-xtitle/.g-ytitle realmente renderizados, por plot. -->
+<iframe id="f" style="width:1440px;height:1100px;border:0"></iframe>
+<pre id="results">RUNNING</pre>
+<script>
+  const frame = document.getElementById('f');
+  const out = [];
+  frame.src = '/charts.html';
+  frame.addEventListener('load', () => {
+    const d = frame.contentDocument, c = frame.contentWindow;
+    d.addEventListener('charts-loaded', async () => {
+      await c.samuCharts.whenIdle();
+      await new Promise(r => setTimeout(r, 800));
+      for (const id of ['totals-chart','distribution-chart','ranking-chart',
+                        'gains-chart','losses-chart','scatter-chart','map-chart']) {
+        const gd = d.querySelector('#' + id);
+        const fl = gd && gd._fullLayout;
+        const xt = fl && fl.xaxis && fl.xaxis.title;
+        const yt = fl && fl.yaxis && fl.yaxis.title;
+        const gx = gd && gd.querySelector('.g-xtitle');
+        const gy = gd && gd.querySelector('.g-ytitle');
+        out.push(JSON.stringify({
+          id,
+          fullXtitle: xt ? (typeof xt === 'object' ? xt.text : xt) : null,
+          fullYtitle: yt ? (typeof yt === 'object' ? yt.text : yt) : null,
+          domXtitle: gx ? gx.textContent : null,
+          domYtitle: gy ? gy.textContent : null,
+          domXtitleHidden: gx ? getComputedStyle(gx).display === 'none' : null,
+        }));
+      }
+      document.getElementById('results').textContent = out.join('\n') + '\nDONE';
+    }, { once: true });
+  });
+</script>
+</body></html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head><body style="margin:0">
+<!-- Auditoria mecânica da visão geral: filtros UF/candidato/busca/tendência,
+     paginação/reset e exportação CSV (BOM + ';' + linhas = rótulo da tabela).
+     chrome --headless --dump-dom .../audit-overview.html -->
+<iframe id="f" style="width:1440px;height:1100px;border:0"></iframe>
+<pre id="results">RUNNING</pre>
+<script>
+  const results = [];
+  const check = (name, cond, extra = '') =>
+    results.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ` :: ${extra}` : ''}`);
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const count = t => { const m = t.match(/([\d.]+)\s+munic[ií]pio/); return m ? +m[1].replace(/\./g, '') : NaN; };
+
+  const frame = document.getElementById('f');
+  let doc, win, q, qa;
+
+  const run = async () => {
+    await new Promise(resolve => {
+      frame.addEventListener('load', () => {
+        const c = frame.contentWindow;
+        c.__errors = [];
+        const oe = c.console.error.bind(c.console);
+        c.console.error = (...a) => { c.__errors.push('console.error: ' + a.join(' ')); oe(...a); };
+        c.addEventListener('unhandledrejection', e =>
+          c.__errors.push('unhandledrejection: ' + (e.reason && e.reason.message || e.reason)));
+        c.addEventListener('error', e => c.__errors.push('window.onerror: ' + e.message));
+        frame.contentDocument.addEventListener('data-loaded', e => {
+          c.__cities = e.detail.cities;
+          resolve();
+        }, { once: true });
+        setTimeout(resolve, 40000);
+      }, { once: true });
+      frame.src = '/index.html';
+    });
+    doc = frame.contentDocument; win = frame.contentWindow;
+    q = s => doc.querySelector(s); qa = s => [...doc.querySelectorAll(s)];
+    check('overview ready', doc.body.dataset.ready === 'true');
+
+    const subtitle = () => q('#table-subtitle').textContent;
+    const spCount = count(subtitle());
+    check('baseline subtitle has city count', Number.isFinite(spCount) && spCount > 0,
+      subtitle().slice(0, 60));
+
+    // UF = Brasil para baseline nacional
+    const ufSel = q('#uf-select');
+    ufSel.value = 'all'; ufSel.dispatchEvent(new Event('change'));
+    await sleep(400);
+    const allCount = count(subtitle());
+    check('Brasil recorte = dataset cities', allCount === win.__cities,
+      `label=${allCount} loaded=${win.__cities}`);
+
+    // UF = PA
+    ufSel.value = 'PA'; ufSel.dispatchEvent(new Event('change'));
+    await sleep(400);
+    const paCount = count(subtitle());
+    check('PA filter updates recorte', Number.isFinite(paCount) && paCount > 0 && paCount < allCount,
+      `PA=${paCount} all=${allCount}`);
+    check('PA rows rendered', q('#results-body tr') !== null);
+
+    // Candidato 22 (Flavio)
+    qa('#candidate-tabs .tab').find(b => b.dataset.id === '22').click();
+    await sleep(400);
+    check('candidate 22 active', q('#candidate-tabs .tab[data-id="22"]').getAttribute('aria-pressed') === 'true');
+    check('subtitle names Flavio', /Flavio/i.test(subtitle()), subtitle().slice(0, 80));
+
+    // Busca por cidade
+    const search = q('#search-input');
+    search.value = 'Belém'; search.dispatchEvent(new Event('input'));
+    await sleep(600);
+    const belemCount = count(subtitle());
+    check('search narrows recorte', belemCount > 0 && belemCount < paCount,
+      `Belém=${belemCount}`);
+    check('Belém row present', /Belém/i.test(q('#results-body').textContent));
+
+    // limpa busca; tendência 'loss' + ordenação 'percent'
+    search.value = ''; search.dispatchEvent(new Event('input'));
+    await sleep(600);
+    const trend = q('#trend-select');
+    trend.value = 'loss'; trend.dispatchEvent(new Event('change'));
+    await sleep(400);
+    const lossCount = count(subtitle());
+    check('trend=loss narrows recorte', lossCount > 0 && lossCount <= paCount,
+      `loss=${lossCount} pa=${paCount}`);
+    q('#order-select').value = 'percent';
+    q('#order-select').dispatchEvent(new Event('change'));
+    await sleep(400);
+    check('order=percent re-renders', q('#results-body tr') !== null);
+    trend.value = 'all'; trend.dispatchEvent(new Event('change'));
+    q('#order-select').value = 'gain'; q('#order-select').dispatchEvent(new Event('change'));
+    await sleep(400);
+    check('recorte back to PA total', count(subtitle()) === paCount,
+      `${count(subtitle())} vs ${paCount}`);
+
+    // Paginação: PA > 50 linhas => 3 páginas
+    check('pagination visible for PA', !q('#pagination').hidden);
+    const next = qa('.page-button').find(b => b.dataset.page === '2' || /Próxima/.test(b.textContent));
+    next.click();
+    await sleep(400);
+    check('page 2 active', /Página 2 de/.test(q('.page-info').textContent),
+      q('.page-info').textContent);
+    qa('.page-button').find(b => b.dataset.page === '1').click();
+    await sleep(400);
+    check('back to page 1', /Página 1 de/.test(q('.page-info').textContent));
+
+    // Reset (volta para UF padrão SP)
+    q('#reset-button').click();
+    await sleep(400);
+    check('reset clears search/trend', search.value === '' && q('#trend-select').value === 'all');
+    check('reset uf -> SP', ufSel.value === 'SP', ufSel.value);
+
+    // CSV: intercepta createObjectURL + <a download>.click antes do download real
+    ufSel.value = 'PA'; ufSel.dispatchEvent(new Event('change'));
+    qa('#candidate-tabs .tab').find(b => b.dataset.id === '22').click();
+    await sleep(500);
+    const expectedCount = count(subtitle());
+    let blob = null, fileName = null;
+    const origURL = win.URL.createObjectURL.bind(win.URL);
+    win.URL.createObjectURL = b => { blob = b; return origURL(b); };
+    const origClick = win.HTMLAnchorElement.prototype.click;
+    win.HTMLAnchorElement.prototype.click = function () {
+      if (this.download) { fileName = this.download; return; }
+      return origClick.apply(this, arguments);
+    };
+    q('#csv-button').click();
+    await sleep(300);
+    win.URL.createObjectURL = origURL;
+    win.HTMLAnchorElement.prototype.click = origClick;
+    check('csv blob captured', blob !== null);
+    check('csv filename PA/22', fileName === 'samu-confere-2026-PA-22.csv', fileName);
+    if (blob) {
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      check('csv has UTF-8 BOM',
+        bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF,
+        `first=${[bytes[0],bytes[1],bytes[2]].map(b=>b.toString(16))}`);
+      const text = await blob.text();
+      const lines = text.split('\r\n').filter(l => l.length);
+      check('csv semicolon delimiter', lines[0].split(';').length >= 5,
+        `cols=${lines[0].split(';').length}`);
+      check('csv rows = filtered label count', lines.length - 1 === expectedCount,
+        `csv=${lines.length - 1} label=${expectedCount}`);
+      check('csv header PT fields', /Munic/.test(lines[0]) || /UF/.test(lines[0]),
+        lines[0].slice(0, 80));
+    }
+
+    check('no page errors/unhandled rejections', win.__errors.length === 0,
+      win.__errors.join(' | ').slice(0, 300));
+    document.getElementById('results').textContent = results.join('\n') + '\nDONE';
+  };
+  run();
+</script>
+</body></html>

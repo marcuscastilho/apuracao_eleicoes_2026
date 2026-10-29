@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Samu confere — teste de layout</title></head>
+<body>
+  <!-- Suíte de layout: mede alinhamento/overflow responsivo real em index.html e
+       charts.html dentro de iframe mesma origem, em várias larguras. -->
+  <iframe id="frame" style="width:1440px;height:1000px"></iframe>
+  <pre id="results">RUNNING</pre>
+  <script type="module">
+    const results = [];
+    const check = (name, cond, extra = '') =>
+      results.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ` :: ${extra}` : ''}`);
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    const frame = document.getElementById('frame');
+    const load = (url, eventName) => new Promise(resolve => {
+      const onload = () => {
+        frame.contentDocument.addEventListener(eventName, resolve, { once: true });
+        setTimeout(resolve, 45000);
+      };
+      frame.addEventListener('load', onload, { once: true });
+      frame.src = url;
+    });
+    const WIDTHS = [1440, 1024, 768, 390, 360, 320];
+
+    const setW = async (win, px) => {
+      frame.style.width = px + 'px';
+      win.dispatchEvent(new win.Event('resize'));
+      await sleep(600);
+    };
+
+    /* ---------- index.html ---------- */
+    await load('/index.html', 'data-loaded');
+    let doc = frame.contentDocument, win = frame.contentWindow;
+    const q = s => doc.querySelector(s), qa = s => [...doc.querySelectorAll(s)];
+
+    for (const px of WIDTHS) {
+      await setW(win, px);
+      const iw = win.innerWidth;
+      check(`index no overflow at ${px}`,
+        doc.documentElement.scrollWidth <= iw + 1,
+        `scrollWidth=${doc.documentElement.scrollWidth} innerWidth=${iw}`);
+      check(`index sidebar in bounds at ${px}`,
+        q('.sidebar').getBoundingClientRect().right <= iw + 1);
+      check(`index topbar in bounds at ${px}`,
+        q('.topbar').getBoundingClientRect().right <= iw + 1);
+      check(`index cards inside content at ${px}`,
+        qa('.kpi').every(k => k.getBoundingClientRect().right <= iw + 1));
+      if (px <= 640) {
+        const sel = q('#uf-select');
+        check(`index select >=44px at ${px}`, sel.getBoundingClientRect().height >= 43,
+          sel.getBoundingClientRect().height);
+      }
+    }
+    // Desktop: 4 campos compartilham a linha do grid
+    await setW(win, 1440);
+    const oFields = qa('.overview-filter-grid .field');
+    check('overview grid has 4 fields + actions', oFields.length === 5, oFields.length);
+    const tops = oFields.slice(0, 4).map(f => Math.round(f.getBoundingClientRect().top));
+    check('overview 4 selects share row top', new Set(tops).size === 1, tops.join(','));
+    check('overview scroll regions keyboard accessible',
+      q('.table-scroll') && q('.table-scroll').getAttribute('tabindex') === '0' &&
+      q('.chart-scroll') && q('.chart-scroll').getAttribute('tabindex') === '0');
+    check('overview chart-scroll may pan (allowed)',
+      q('.chart-scroll').scrollWidth > 0);
+
+    /* ---------- charts.html ---------- */
+    // Carregamento FRESCO em viewport estreita (não redimensionada): labels Y
+    // municipais devem ficar dentro do SVG do plot (automargin em todo perfil)
+    let cq, cqa;
+    for (const px of [390, 320]) {
+      frame.style.width = px + 'px';
+      await load('/charts.html', 'charts-loaded');
+      doc = frame.contentDocument; win = frame.contentWindow;
+      cq = s => doc.querySelector(s); cqa = s => [...doc.querySelectorAll(s)];
+      await win.samuCharts.whenIdle(); await sleep(400);
+      check(`fresh ${px} no overflow`,
+        doc.documentElement.scrollWidth <= win.innerWidth + 1,
+        `scrollWidth=${doc.documentElement.scrollWidth} innerWidth=${win.innerWidth}`);
+      for (const id of ['gains-chart', 'losses-chart']) {
+        const gd = cq(`#${id}`);
+        const kind = id.replace('-chart', '');
+        if (!gd || !gd.data || !gd.data.length) continue;
+        const gdr = gd.getBoundingClientRect();
+        const ticks = [...gd.querySelectorAll('[class*="yaxislayer"] .ytick text')];
+        const clipped = ticks.filter(t => {
+          const r = t.getBoundingClientRect();
+          return r.left < gdr.left - 1 || r.right > gdr.right + 1;
+        });
+        check(`fresh ${px} ${id} y labels inside plot`, clipped.length === 0,
+          `${clipped.length} clipped de ${ticks.length}`);
+        check(`fresh ${px} ${id} bars keep full name/UF data`,
+          gd.data[0].y.length === win.samuCharts.model[kind].length &&
+          gd.data[0].y.every(v => String(v).includes('/')),
+          `${gd.data[0].y.length}/${win.samuCharts.model[kind].length}`);
+        check(`fresh ${px} ${id} hover keeps full name`,
+          String(gd.data[0].hovertext[0]).startsWith(String(gd.data[0].y[0]).split('/')[0]));
+      }
+      check(`fresh ${px} gains has model rows`,
+        cq('#gains-chart').data && cq('#gains-chart').data[0].y.length ===
+          win.samuCharts.model.gains.length,
+        String(win.samuCharts.model.gains.length));
+    }
+
+    await load('/charts.html', 'charts-loaded');
+    doc = frame.contentDocument; win = frame.contentWindow;
+    cq = s => doc.querySelector(s); cqa = s => [...doc.querySelectorAll(s)];
+
+    for (const px of WIDTHS) {
+      await setW(win, px);
+      const iw = win.innerWidth;
+      check(`charts no overflow at ${px}`,
+        doc.documentElement.scrollWidth <= iw + 1,
+        `scrollWidth=${doc.documentElement.scrollWidth} innerWidth=${iw}`);
+      check(`charts sidebar in bounds at ${px}`,
+        cq('.sidebar').getBoundingClientRect().right <= iw + 1);
+      check(`charts topbar in bounds at ${px}`,
+        cq('.topbar').getBoundingClientRect().right <= iw + 1);
+      if (px <= 900) {
+        ['map-chart', 'totals-chart', 'distribution-chart', 'scatter-chart'].forEach(id => {
+          const sc = cq(`#${id}`).parentElement;
+          check(`charts ${id} no pan at ${px}`,
+            sc.scrollWidth <= sc.clientWidth + 1, `${sc.scrollWidth}>${sc.clientWidth}`);
+        });
+      }
+      if (px <= 640) {
+        check(`charts select >=44px at ${px}`,
+          cq('#c-uf-select').getBoundingClientRect().height >= 43,
+          cq('#c-uf-select').getBoundingClientRect().height);
+      }
+    }
+
+    // Desktop 1440: selects UF/Métrica alinhados, helper abaixo e fora do .field
+    await setW(win, 1440);
+    const ufSel = cq('#c-uf-select'), metSel = cq('#c-metric-select'), desc = cq('#c-metric-desc');
+    const ufr = ufSel.getBoundingClientRect(), metr = metSel.getBoundingClientRect();
+    check('charts UF/Métrica selects same top', Math.abs(ufr.top - metr.top) <= 1,
+      `${ufr.top} vs ${metr.top}`);
+    check('charts UF/Métrica selects same height', Math.abs(ufr.height - metr.height) <= 1,
+      `${ufr.height} vs ${metr.height}`);
+    check('charts UF/Métrica selects do not overlap', ufr.right <= metr.left + 1);
+    check('metric helper not inside .field', !desc.closest('.field'));
+    check('metric helper below selects', desc.getBoundingClientRect().top >= ufr.bottom - 1,
+      `${desc.getBoundingClientRect().top} >= ${ufr.bottom}`);
+    check('metric helper id + describedby intact',
+      metSel.getAttribute('aria-describedby') === 'c-metric-desc');
+
+    // Trocar métrica não desalinha selects; helper permanece abaixo
+    const setMetric = v => { metSel.value = v; metSel.dispatchEvent(new Event('change')); };
+    setMetric('growth');
+    await win.samuCharts.whenIdle(); await sleep(300);
+    const ufr2 = ufSel.getBoundingClientRect(), metr2 = metSel.getBoundingClientRect();
+    check('growth keeps selects aligned', Math.abs(ufr2.top - metr2.top) <= 1 &&
+      Math.abs(ufr2.top - ufr.top) <= 1, `${ufr2.top}/${metr2.top} was ${ufr.top}`);
+    check('helper still below after growth',
+      desc.getBoundingClientRect().top >= ufr2.bottom - 1);
+    setMetric('pp');
+    await win.samuCharts.whenIdle(); await sleep(300);
+    check('pp keeps selects aligned',
+      Math.abs(ufSel.getBoundingClientRect().top - metSel.getBoundingClientRect().top) <= 1);
+    check('helper still below after pp',
+      desc.getBoundingClientRect().top >= metSel.getBoundingClientRect().bottom - 1);
+    setMetric('delta');
+    await win.samuCharts.whenIdle(); await sleep(200);
+
+    // Interações preservadas: PA + candidato 22 + métrica pp
+    const ufSelc = cq('#c-uf-select');
+    ufSelc.value = 'PA'; ufSelc.dispatchEvent(new Event('change'));
+    cqa('#c-tabs .tab')[1].click();
+    setMetric('pp');
+    await win.samuCharts.whenIdle(); await sleep(400);
+    check('layout keeps interactions (PA/22/pp)',
+      win.samuCharts.state.uf === 'PA' &&
+      win.samuCharts.state.candidateId === '22' &&
+      win.samuCharts.state.metric === 'pp',
+      `${win.samuCharts.state.uf}/${win.samuCharts.state.candidateId}/${win.samuCharts.state.metric}`);
+    check('map click handler survived layout', cq('#map-chart').data.length >= 1);
+    cqa('#c-tabs .tab')[0].click();
+    ufSelc.value = 'all'; ufSelc.dispatchEvent(new Event('change'));
+    setMetric('delta');
+    await win.samuCharts.whenIdle(); await sleep(300);
+
+    document.getElementById('results').textContent = `${results.join('\n')}\nDONE`;
+  </script>
+</body>
+</html>

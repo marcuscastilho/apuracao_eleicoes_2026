@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Samu confere — teste do gráfico de distribuição</title>
+</head>
+<body>
+  <!-- Regressão: labels do donut trazem a contagem (legenda sempre legível),
+       textinfo none (sem anotação sobreposta na fatia), hover label+percent.
+       Rode: chrome --headless --dump-dom --virtual-time-budget=150000 \
+         http://127.0.0.1:8080/test_distribution.html -->
+  <iframe id="frame" style="border:0"></iframe>
+  <pre id="results">RUNNING</pre>
+  <script type="module">
+    const results = [];
+    const check = (name, cond, extra = '') =>
+      results.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ` :: ${extra}` : ''}`);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    const fmt = new Intl.NumberFormat('pt-BR');
+
+    const frame = document.getElementById('frame');
+    let doc, win, q;
+
+    const loadCharts = async (w) => {
+      frame.style.width = `${w}px`;
+      frame.style.height = '1100px';
+      await new Promise(resolve => {
+        frame.addEventListener('load', () => {
+          const c = frame.contentWindow;
+          c.__errors = [];
+          const oe = c.console.error.bind(c.console);
+          c.console.error = (...a) => { c.__errors.push(a.join(' ')); oe(...a); };
+          frame.contentDocument.addEventListener('charts-loaded', resolve, { once: true });
+          setTimeout(resolve, 45000);
+        }, { once: true });
+        frame.src = '/charts.html';
+      });
+      doc = frame.contentDocument;
+      win = frame.contentWindow;
+      q = s => doc.querySelector(s);
+      await win.samuCharts.whenIdle();
+      await sleep(700);
+    };
+
+    const dist = () => q('#distribution-chart');
+    const legendTexts = () => [...dist().querySelectorAll('.legend .legendtext, .legendtext')]
+      .map(n => n.textContent.trim()).filter(Boolean);
+
+    const assertDist = async (tag) => {
+      const gd = dist();
+      const d = win.samuCharts.model.distribution;
+      const tr = gd.data[0];
+      check(`${tag} trace values = model`, tr.values.join(',') === d.map(x => x.value).join(','),
+        tr.values.join(','));
+      const expected = d.map(x => `${x.label} (${fmt.format(x.value)})`);
+      check(`${tag} trace labels = label+count`, tr.labels.join('|') === expected.join('|'),
+        tr.labels.join('|'));
+      check(`${tag} textinfo none`, tr.textinfo === 'none', tr.textinfo);
+      check(`${tag} hover label+percent`,
+        tr.hovertemplate === '%{label}<br>%{percent} do recorte<extra></extra>',
+        tr.hovertemplate);
+      const lt = legendTexts();
+      check(`${tag} legend has all categories incl smallest`,
+        expected.every(e => lt.some(t => t === e)),
+        lt.join(' | '));
+      const texts = gd.querySelectorAll('.pie text, .pielayer text');
+      check(`${tag} no on-slice value annotations`,
+        [...texts].every(t => !t.textContent.trim()),
+        `${[...texts].filter(t=>t.textContent.trim()).length} nonempty`);
+      const p = gd.getBoundingClientRect();
+      check(`${tag} legend within plot bounds`, [...gd.querySelectorAll('.legendtext')]
+        .every(n => {
+          const r = n.getBoundingClientRect();
+          return r.left >= p.left - 1 && r.right <= p.right + 1 &&
+                 r.top >= p.top - 1 && r.bottom <= p.bottom + 1;
+        }));
+    };
+
+    await loadCharts(1440);
+    await assertDist('desktop');
+    check('desktop no console errors', win.__errors.length === 0,
+      win.__errors.join(' | ').slice(0, 200));
+
+    for (const w of [390, 320]) {
+      await loadCharts(w);
+      check(`${w} no page overflow`,
+        doc.documentElement.scrollWidth <= win.innerWidth + 1,
+        `${doc.documentElement.scrollWidth} > ${win.innerWidth}`);
+      await assertDist(w);
+      check(`${w} no console errors`, win.__errors.length === 0,
+        win.__errors.join(' | ').slice(0, 200));
+    }
+
+    frame.style.width = '1300px';
+    document.getElementById('results').textContent = `${results.join('\n')}\nDONE`;
+  </script>
+</body>
+</html>

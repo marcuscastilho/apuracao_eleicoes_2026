@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Samu confere — teste de títulos de eixo</title>
+</head>
+<body>
+  <!-- Regressão: títulos de eixo legados (string) eram ignorados no Plotly 3.
+       Verifica fullLayout + nós DOM .g-xtitle/.g-ytitle renderizados. Rode:
+       chrome --headless --dump-dom --virtual-time-budget=200000 \
+         http://127.0.0.1:8080/test_axes.html -->
+  <iframe id="frame" style="border:0"></iframe>
+  <pre id="results">RUNNING</pre>
+  <script type="module">
+    const results = [];
+    const check = (name, cond, extra = '') =>
+      results.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ` :: ${extra}` : ''}`);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    const frame = document.getElementById('frame');
+    let doc, win, q;
+    const CART = ['totals-chart','ranking-chart','gains-chart','losses-chart','scatter-chart'];
+
+    const loadCharts = async (w) => {
+      frame.style.width = `${w}px`;
+      frame.style.height = '1100px';
+      await new Promise(resolve => {
+        frame.addEventListener('load', () => {
+          const c = frame.contentWindow;
+          c.__errors = [];
+          const oe = c.console.error.bind(c.console);
+          c.console.error = (...a) => { c.__errors.push(a.join(' ')); oe(...a); };
+          frame.contentDocument.addEventListener('charts-loaded', resolve, { once: true });
+          setTimeout(resolve, 45000);
+        }, { once: true });
+        frame.src = '/charts.html';
+      });
+      doc = frame.contentDocument;
+      win = frame.contentWindow;
+      q = s => doc.querySelector(s);
+      await win.samuCharts.whenIdle();
+      await sleep(700);
+    };
+
+    const titleText = (id, ax) => {
+      const a = q('#' + id)._fullLayout && q('#' + id)._fullLayout[ax];
+      return a && a.title && typeof a.title === 'object' ? a.title.text : a && a.title;
+    };
+    const domTitle = (id, cls) => {
+      const el = q('#' + id).querySelector(cls);
+      return el ? el.textContent.trim() : null;
+    };
+    const assertTitle = (id, ax, cls, expected, tag) => {
+      check(`${tag} ${ax} title`, titleText(id, ax) === expected,
+        `"${titleText(id, ax)}"`);
+      check(`${tag} ${ax} DOM title rendered`, domTitle(id, cls) === expected,
+        `"${domTitle(id, cls)}"`);
+    };
+    const inSvg = (id, cls) => {
+      const gd = q('#' + id), el = gd.querySelector(cls);
+      if (!el || !el.textContent.trim()) return false;
+      const r = el.getBoundingClientRect(), p = gd.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 &&
+        r.left >= p.left - 1 && r.right <= p.right + 1 &&
+        r.top >= p.top - 1 && r.bottom <= p.bottom + 1;
+    };
+
+    /* ---------- desktop 1440 ---------- */
+    await loadCharts(1440);
+    const mm = win.samuCharts.model.metric;
+    assertTitle('totals-chart', 'yaxis', '.g-ytitle', 'Votos', 'totals');
+    check('totals x stays untitled', !domTitle('totals-chart', '.g-xtitle'),
+      `"${domTitle('totals-chart', '.g-xtitle')}"`);
+    assertTitle('ranking-chart', 'xaxis', '.g-xtitle',
+      `${mm.label} (${mm.unit})`, 'ranking');
+    assertTitle('gains-chart', 'xaxis', '.g-xtitle', 'Variação de votos', 'gains');
+    assertTitle('losses-chart', 'xaxis', '.g-xtitle', 'Variação de votos', 'losses');
+    assertTitle('scatter-chart', 'xaxis', '.g-xtitle',
+      'Participação no 1º turno (%)', 'scatter');
+    assertTitle('scatter-chart', 'yaxis', '.g-ytitle',
+      'Participação no 2º turno (%)', 'scatter');
+    check('no placeholder text rendered', CART.every(id =>
+      ['.g-xtitle', '.g-ytitle'].every(cls => {
+        const el = q('#' + id).querySelector(cls);
+        return !el || !/^Click to enter/.test(el.textContent.trim());
+      })));
+    check('titled axes have automargin',
+      q('#totals-chart')._fullLayout.yaxis.automargin === true &&
+      q('#scatter-chart')._fullLayout.xaxis.automargin === true);
+    // pie/geo sem eixos cartesianos
+    check('distribution has no x/y axis title DOM',
+      !domTitle('distribution-chart', '.g-xtitle') &&
+      !domTitle('distribution-chart', '.g-ytitle'));
+    check('map has no x/y axis title DOM',
+      !domTitle('map-chart', '.g-xtitle') && !domTitle('map-chart', '.g-ytitle'));
+
+    // título do ranking segue a métrica selecionada
+    const metricSel = q('#c-metric-select');
+    metricSel.value = 'pp'; metricSel.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(600);
+    const mm2 = win.samuCharts.model.metric;
+    check('ranking x title follows metric pp',
+      titleText('ranking-chart', 'xaxis') === `${mm2.label} (${mm2.unit})` &&
+      domTitle('ranking-chart', '.g-xtitle') === `${mm2.label} (${mm2.unit})`,
+      `"${domTitle('ranking-chart', '.g-xtitle')}"`);
+    metricSel.value = 'delta'; metricSel.dispatchEvent(new Event('change'));
+    await win.samuCharts.whenIdle(); await sleep(500);
+    check('ranking x title back to delta',
+      domTitle('ranking-chart', '.g-xtitle') === `${mm.label} (${mm.unit})`);
+    check('desktop titles inside plot bounds', CART.every(id =>
+      ['.g-xtitle', '.g-ytitle'].every(cls => {
+        const el = q('#' + id).querySelector(cls);
+        return !el || !el.textContent.trim() || inSvg(id, cls);
+      })));
+    check('desktop no console errors', win.__errors.length === 0,
+      win.__errors.join(' | ').slice(0, 200));
+
+    /* ---------- mobile 390 + 320 (carga inicial estreita) ---------- */
+    for (const w of [390, 320]) {
+      await loadCharts(w);
+      check(`${w} no page overflow`,
+        doc.documentElement.scrollWidth <= win.innerWidth + 1,
+        `${doc.documentElement.scrollWidth} > ${win.innerWidth}`);
+      check(`${w} titles rendered nonempty`, CART.every(id =>
+        domTitle(id, '.g-xtitle') || domTitle(id, '.g-ytitle')));
+      check(`${w} titles inside plot svg`, CART.every(id =>
+        ['.g-xtitle', '.g-ytitle'].every(cls => {
+          const el = q('#' + id).querySelector(cls);
+          return !el || !el.textContent.trim() || inSvg(id, cls);
+        })));
+      check(`${w} no title overlap between siblings`, (() => {
+        const rects = [];
+        for (const id of CART) for (const cls of ['.g-xtitle', '.g-ytitle']) {
+          const el = q('#' + id).querySelector(cls);
+          if (el && el.textContent.trim()) rects.push(el.getBoundingClientRect());
+        }
+        return rects.every((a, i) => rects.every((b, j) => i === j ||
+          a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom));
+      })());
+      check(`${w} no console errors`, win.__errors.length === 0,
+        win.__errors.join(' | ').slice(0, 200));
+    }
+
+    frame.style.width = '1300px';
+    document.getElementById('results').textContent = `${results.join('\n')}\nDONE`;
+  </script>
+</body>
+</html>
