@@ -172,7 +172,7 @@ a { color: var(--accent); }
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  background: #22c55e;
 }
 
 .content {
